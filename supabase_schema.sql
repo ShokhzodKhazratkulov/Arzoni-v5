@@ -101,10 +101,10 @@ ALTER TABLE banners ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read access on listings" ON listings;
 CREATE POLICY "Allow public read access on listings" ON listings FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Allow anyone to insert listings" ON listings;
+DROP POLICY IF EXISTS "Allow authenticated to insert listings" ON listings;
 CREATE POLICY "Allow authenticated to insert listings" ON listings FOR INSERT TO authenticated WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow anyone to update listings" ON listings;
+DROP POLICY IF EXISTS "Allow authenticated to update listings" ON listings;
 CREATE POLICY "Allow authenticated to update listings" ON listings FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow admin to delete listings" ON listings;
@@ -138,10 +138,10 @@ FOR EACH ROW EXECUTE FUNCTION protect_admin_fields();
 DROP POLICY IF EXISTS "Allow public read access on reviews" ON reviews;
 CREATE POLICY "Allow public read access on reviews" ON reviews FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Allow anyone to insert reviews" ON reviews;
+DROP POLICY IF EXISTS "Allow authenticated to insert reviews" ON reviews;
 CREATE POLICY "Allow authenticated to insert reviews" ON reviews FOR INSERT TO authenticated WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow anyone to update reviews" ON reviews;
+DROP POLICY IF EXISTS "Allow authenticated to update reviews" ON reviews;
 CREATE POLICY "Allow authenticated to update reviews" ON reviews FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow admin to delete reviews" ON reviews;
@@ -181,7 +181,7 @@ DROP POLICY IF EXISTS "Public Access" ON storage.objects;
 CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'restaurant-photos');
 
 -- Allow authenticated users to upload to restaurant-photos
-DROP POLICY IF EXISTS "Anyone can upload" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated can upload" ON storage.objects;
 CREATE POLICY "Authenticated can upload" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'restaurant-photos');
 
 -- Allow admins full control
