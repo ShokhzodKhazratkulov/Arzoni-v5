@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "user_tokens": {
+      "title": "User Tokens",
+      "description": "Stores FCM tokens for push notifications linked to Supabase users.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Primary key."
+        },
+        "user_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Reference to auth.users id."
+        },
+        "fcm_token": {
+          "type": "string",
+          "description": "The Firebase Cloud Messaging token."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of token registration."
+        }
+      },
+      "required": ["user_id", "fcm_token"]
+    }
+  }
+}

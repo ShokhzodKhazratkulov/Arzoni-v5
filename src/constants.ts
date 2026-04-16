@@ -1,0 +1,48 @@
+export const DISH_TYPES = [
+  { id: 'All', label: 'allDishes' },
+  { id: 'osh', label: 'dishes.osh' },
+  { id: 'manti', label: 'dishes.manti' },
+  { id: 'dimlama', label: 'dishes.dimlama' },
+  { id: 'lagmon', label: 'dishes.lagmon' },
+  { id: 'somsa', label: 'dishes.somsa' },
+  { id: 'shorva', label: 'dishes.shorva' },
+  { id: 'norin', label: 'dishes.norin' },
+  { id: 'qozonKabob', label: 'dishes.qozonKabob' },
+  { id: 'nonChoy', label: 'dishes.nonChoy' },
+  { id: 'mastava', label: 'dishes.mastava' },
+  { id: 'chuchvara', label: 'dishes.chuchvara' },
+  { id: 'shashlik', label: 'dishes.shashlik' },
+  { id: 'jiz', label: 'dishes.jiz' }
+];
+
+export const CLOTHING_TYPES = [
+  { id: 'All', label: 'allClothes' },
+  { id: 'koylak', label: 'clothes.koylak' },
+  { id: 'shim', label: 'clothes.shim' },
+  { id: 'jinsi', label: 'clothes.jinsi' },
+  { id: 'krossovka', label: 'clothes.krossovka' },
+  { id: 'sportKiyim', label: 'clothes.sportKiyim' },
+  { id: 'sumka', label: 'clothes.sumka' },
+  { id: 'boshKiyim', label: 'clothes.boshKiyim' },
+  { id: 'bolalarKiyimi', label: 'clothes.bolalarKiyimi' },
+  { id: 'ayollarKiyimi', label: 'clothes.ayollarKiyimi' },
+  { id: 'erkaklarKiyimi', label: 'clothes.erkaklarKiyimi' }
+];
+
+export const PRICE_RANGES = [
+  { id: 'all', label: 'allPrices', min: 0, max: Infinity },
+  { id: 'under25', label: 'under25', min: 0, max: 25000 },
+  { id: '25_30', label: 'range25_30', min: 25000, max: 30000 },
+  { id: '30_40', label: 'range30_40', min: 30000, max: 40000 },
+  { id: 'custom', label: 'customPrice', min: 0, max: Infinity }
+];
+
+export const CLOTHING_PRICE_RANGES = [
+  { id: 'all', label: 'allPrices', min: 0, max: Infinity },
+  { id: 'under50', label: 'under50', min: 0, max: 50000 },
+  { id: '50_100', label: 'range50_100', min: 50000, max: 100000 },
+  { id: '100_200', label: 'range100_200', min: 100000, max: 200000 },
+  { id: 'custom', label: 'customPrice', min: 0, max: Infinity }
+];
+
+export const TASHKENT_CENTER = { lat: 41.2995, lng: 69.2401 };
