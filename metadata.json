@@ -1,6 +1,6 @@
 {
-  "name": "Remix: Arzoni v3",
-  "description": "Discover cheap local restaurants and food spots across Uzbekistan. A community-powered map for budget-conscious foodies.",
+  "name": "Arzoni - Local Food Discovery",
+  "description": "Discover affordable local restaurants and street food spots in Uzbekistan. Community-powered map with verified listings and sponsored promotions.",
   "requestFramePermissions": [
     "geolocation",
     "camera"

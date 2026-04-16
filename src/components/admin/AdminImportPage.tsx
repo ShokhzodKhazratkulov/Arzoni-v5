@@ -18,7 +18,7 @@ export function AdminImportPage() {
   const apiKey = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || '';
 
   return (
-    <APIProvider apiKey={apiKey}>
+    <APIProvider apiKey={apiKey} libraries={['places']}>
       <AdminImportContent />
     </APIProvider>
   );

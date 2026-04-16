@@ -387,7 +387,7 @@ export default function AddRestaurantModal({ isOpen, onClose, onSubmit, onAddRev
                       {t('selectOnMap')}
                     </label>
                     <div className="h-[220px] w-full rounded-xl overflow-hidden border border-gray-200 relative mb-2">
-                      <APIProvider apiKey={apiKey}>
+                      <APIProvider apiKey={apiKey} libraries={['places']}>
                         <Map
                           defaultCenter={formData.location}
                           defaultZoom={13}

@@ -37,9 +37,9 @@ export async function importFromGoogle(
   const queryType = type === 'food' ? 'restaurant' : 'clothing_store';
   
   // We need to use the Google Maps JavaScript API PlacesService.
-  // This requires the 'google' object to be available on the window.
-  if (!(window as any).google) {
-    throw new Error('Google Maps API not loaded. Please visit the map page first or ensure API is loaded.');
+  // This requires the 'google' object and 'places' library to be available.
+  if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) {
+    throw new Error('Google Maps Places library not loaded. Please ensure the API is fully initialized with the "places" library.');
   }
 
   const service = new (window as any).google.maps.places.PlacesService(document.createElement('div'));

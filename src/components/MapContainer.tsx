@@ -317,7 +317,7 @@ export default function MapContainer(props: MapContainerProps) {
   const apiKey = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || '';
 
   return (
-    <APIProvider apiKey={apiKey}>
+    <APIProvider apiKey={apiKey} libraries={['places']}>
       <MapContent {...props} />
     </APIProvider>
   );
