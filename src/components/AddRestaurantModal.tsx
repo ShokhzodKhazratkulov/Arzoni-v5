@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, MapPin, Camera, Star, Search, Loader2, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, Check, MapPin, Camera, Star, Search, Loader2, AlertTriangle, Info } from 'lucide-react';
 import { DISH_TYPES, CLOTHING_TYPES, TASHKENT_CENTER } from '../constants';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -47,6 +48,7 @@ interface AddRestaurantModalProps {
 export default function AddRestaurantModal({ isOpen, onClose, onSubmit, onAddReview, initialRestaurant, selectedCategory }: AddRestaurantModalProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const apiKey = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || '';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -295,7 +297,8 @@ export default function AddRestaurantModal({ isOpen, onClose, onSubmit, onAddRev
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
+            {user ? (
+              <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
               {localError && (
                 <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm">
                   <AlertTriangle size={18} className="shrink-0" />
@@ -533,6 +536,32 @@ export default function AddRestaurantModal({ isOpen, onClose, onSubmit, onAddRev
                 </button>
               </div>
             </form>
+          ) : (
+            <div className="p-12 flex flex-col items-center text-center space-y-6">
+              <div className="w-20 h-20 bg-[#1D9E75]/10 rounded-full flex items-center justify-center">
+                <Info size={40} className="text-[#1D9E75]" />
+              </div>
+              <div className="space-y-2 max-w-xs">
+                <h3 className="text-xl font-black text-gray-900">{t('loginRequired')}</h3>
+                <p className="text-sm text-gray-500">{t('loginToAddPlace')}</p>
+              </div>
+              <button
+                onClick={() => {
+                  onClose();
+                  navigate('/login');
+                }}
+                className="w-full max-w-xs py-4 bg-[#1D9E75] text-white rounded-2xl font-black text-lg shadow-lg shadow-[#1D9E75]/20 hover:scale-[1.02] transition-transform"
+              >
+                {t('login')}
+              </button>
+              <button
+                onClick={onClose}
+                className="text-gray-400 font-bold text-sm"
+              >
+                {t('cancel')}
+              </button>
+            </div>
+          )}
           </motion.div>
         </div>
       )}

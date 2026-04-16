@@ -63,6 +63,8 @@ export interface Review {
   photo_urls?: string[];
   likes?: number;
   dislikes?: number;
+  price_per_pax?: number;
+  service_tax?: number;
   created_at: string;
 }
 
@@ -104,6 +106,8 @@ export interface DishStats {
   avgRating: number;
   reviewCount: number;
   popularity: number;
+  avgPricePerPax?: number;
+  avgServiceTax?: number;
   bestComment?: string;
   displayName?: string;
 }
@@ -115,6 +119,8 @@ export type AddReviewFormState = {
   dish: string;
   customDishName: string;
   pricePaid: string;
+  pricePerPax: string;
+  serviceTax: string;
   rating: number;
   visitDate: string;
   priceFeeling: PriceFeeling | '';

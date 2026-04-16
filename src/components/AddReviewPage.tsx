@@ -19,6 +19,33 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center space-y-6">
+          <div className="w-20 h-20 bg-[#1D9E75]/10 rounded-full flex items-center justify-center mx-auto">
+            <Info size={40} className="text-[#1D9E75]" />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900">{t('loginRequired')}</h2>
+          <p className="text-gray-600">{t('loginToAddReview')}</p>
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full py-4 bg-[#1D9E75] text-white rounded-2xl font-black text-lg shadow-lg shadow-[#1D9E75]/20 hover:scale-[1.02] transition-transform"
+          >
+            {t('login')}
+          </button>
+          <button
+            onClick={() => navigate(-1)}
+            className="w-full py-4 text-gray-500 font-bold"
+          >
+            {t('cancel')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -28,6 +55,8 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
     dish: 'Osh',
     customDishName: '',
     pricePaid: '',
+    pricePerPax: '',
+    serviceTax: '',
     rating: 5,
     visitDate: new Date().toISOString().split('T')[0],
     priceFeeling: '',
@@ -109,6 +138,8 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
         listing_id: id,
         dish_name: dishName,
         price_paid: Number(form.pricePaid),
+        price_per_pax: form.pricePerPax ? Number(form.pricePerPax) : undefined,
+        service_tax: form.serviceTax ? Number(form.serviceTax) : undefined,
         rating: form.rating,
         visit_date: form.visitDate,
         price_feeling: form.priceFeeling || undefined,
@@ -224,6 +255,42 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
                   className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D9E75] font-bold text-gray-900 pr-16"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">{t('som')}</span>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+              <label className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-wider">
+                <DollarSign size={16} className="text-[#1D9E75]" />
+                {t('pricePerPax')}
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="pricePerPax"
+                  placeholder="e.g. 15000"
+                  value={form.pricePerPax}
+                  onChange={handleInputChange}
+                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D9E75] font-bold text-gray-900 pr-16"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">{t('som')}</span>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+              <label className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-wider">
+                <Tag size={16} className="text-[#1D9E75]" />
+                {t('serviceTax')}
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="serviceTax"
+                  placeholder="e.g. 10"
+                  value={form.serviceTax}
+                  onChange={handleInputChange}
+                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D9E75] font-bold text-gray-900 pr-16"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
               </div>
             </div>
 

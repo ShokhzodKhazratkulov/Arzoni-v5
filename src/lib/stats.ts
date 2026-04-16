@@ -4,16 +4,42 @@ export function computeDishStats(reviews: Review[]): DishStats[] {
   const totalReviews = reviews.length;
   if (totalReviews === 0) return [];
 
-  const dishMap: { [key: string]: { totalPrice: number; totalRating: number; count: number } } = {};
+  const dishMap: { [key: string]: { 
+    totalPrice: number; 
+    totalRating: number; 
+    count: number;
+    totalPricePerPax: number;
+    paxCount: number;
+    totalServiceTax: number;
+    taxCount: number;
+  } } = {};
 
   reviews.forEach((review) => {
     const dish = review.dish_name || 'Unknown';
     if (!dishMap[dish]) {
-      dishMap[dish] = { totalPrice: 0, totalRating: 0, count: 0 };
+      dishMap[dish] = { 
+        totalPrice: 0, 
+        totalRating: 0, 
+        count: 0,
+        totalPricePerPax: 0,
+        paxCount: 0,
+        totalServiceTax: 0,
+        taxCount: 0
+      };
     }
     dishMap[dish].totalPrice += review.price_paid || 0;
     dishMap[dish].totalRating += review.rating || 0;
     dishMap[dish].count += 1;
+
+    if (review.price_per_pax !== undefined && review.price_per_pax !== null) {
+      dishMap[dish].totalPricePerPax += review.price_per_pax;
+      dishMap[dish].paxCount += 1;
+    }
+
+    if (review.service_tax !== undefined && review.service_tax !== null) {
+      dishMap[dish].totalServiceTax += review.service_tax;
+      dishMap[dish].taxCount += 1;
+    }
   });
 
   return Object.entries(dishMap).map(([name, stats]) => ({
@@ -22,6 +48,8 @@ export function computeDishStats(reviews: Review[]): DishStats[] {
     avgRating: Number((stats.totalRating / stats.count).toFixed(1)),
     reviewCount: stats.count,
     popularity: stats.count / totalReviews,
+    avgPricePerPax: stats.paxCount > 0 ? Math.round(stats.totalPricePerPax / stats.paxCount) : undefined,
+    avgServiceTax: stats.taxCount > 0 ? Number((stats.totalServiceTax / stats.taxCount).toFixed(1)) : undefined,
   }));
 }
 

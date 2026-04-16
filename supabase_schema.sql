@@ -82,6 +82,12 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='listings' AND column_name='dishes') THEN
     ALTER TABLE listings ADD COLUMN dishes TEXT[] DEFAULT '{}';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='price_per_pax') THEN
+    ALTER TABLE reviews ADD COLUMN price_per_pax NUMERIC;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='reviews' AND column_name='service_tax') THEN
+    ALTER TABLE reviews ADD COLUMN service_tax NUMERIC;
+  END IF;
 END $$;
 
 -- 3. Security (RLS)
@@ -94,10 +100,10 @@ DROP POLICY IF EXISTS "Allow public read access on listings" ON listings;
 CREATE POLICY "Allow public read access on listings" ON listings FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Allow anyone to insert listings" ON listings;
-CREATE POLICY "Allow anyone to insert listings" ON listings FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow authenticated to insert listings" ON listings FOR INSERT TO authenticated WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow anyone to update listings" ON listings;
-CREATE POLICY "Allow anyone to update listings" ON listings FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated to update listings" ON listings FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow admin to delete listings" ON listings;
 CREATE POLICY "Allow admin to delete listings" ON listings FOR DELETE USING (
@@ -131,10 +137,10 @@ DROP POLICY IF EXISTS "Allow public read access on reviews" ON reviews;
 CREATE POLICY "Allow public read access on reviews" ON reviews FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Allow anyone to insert reviews" ON reviews;
-CREATE POLICY "Allow anyone to insert reviews" ON reviews FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow authenticated to insert reviews" ON reviews FOR INSERT TO authenticated WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow anyone to update reviews" ON reviews;
-CREATE POLICY "Allow anyone to update reviews" ON reviews FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated to update reviews" ON reviews FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow admin to delete reviews" ON reviews;
 CREATE POLICY "Allow admin to delete reviews" ON reviews FOR DELETE USING (
@@ -162,12 +168,16 @@ CREATE POLICY "Allow admin to delete banners" ON banners FOR DELETE USING (
   LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) IN ('khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com')
 );
 
--- 7. Storage Policies (Run these as separate statements if needed)
+-- 7. Storage Policies
 -- Allow public read access to restaurant-photos
 DROP POLICY IF EXISTS "Public Access" ON storage.objects;
 CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'restaurant-photos');
 
--- Allow admins to manage objects in restaurant-photos
+-- Allow authenticated users to upload to restaurant-photos
+DROP POLICY IF EXISTS "Anyone can upload" ON storage.objects;
+CREATE POLICY "Authenticated can upload" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'restaurant-photos');
+
+-- Allow admins full control
 DROP POLICY IF EXISTS "Admin Manage" ON storage.objects;
 CREATE POLICY "Admin Manage" ON storage.objects FOR ALL TO authenticated
 USING (

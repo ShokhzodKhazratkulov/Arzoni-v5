@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Star, Navigation, MessageSquare, TrendingUp, DollarSign, Globe, ThumbsUp, ThumbsDown, Phone, Instagram, Send, Edit, MapPin, Clock, Info } from 'lucide-react';
+import { ChevronLeft, Star, Navigation, MessageSquare, TrendingUp, DollarSign, Tag, Globe, ThumbsUp, ThumbsDown, Phone, Instagram, Send, Edit, MapPin, Clock, Info } from 'lucide-react';
 import { Review, Listing, DishStats } from '../types';
 import { computeDishStats, filterReviewsByDishAndSort } from '../lib/stats';
 import { useTranslation } from 'react-i18next';
@@ -392,6 +392,24 @@ export default function RestaurantDetailPage() {
                   </div>
                   <p className="text-xl font-black text-gray-900">{Math.round((selectedDishStats?.popularity || 0) * 100)}%</p>
                 </div>
+                {selectedDishStats?.avgPricePerPax && (
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <DollarSign size={14} className="text-[#1D9E75]" />
+                      <span className="text-[10px] font-black text-gray-400 uppercase">{t('avgPricePerPax')}</span>
+                    </div>
+                    <p className="text-xl font-black text-[#1D9E75]">{selectedDishStats.avgPricePerPax.toLocaleString()} {t('som')}</p>
+                  </div>
+                )}
+                {selectedDishStats?.avgServiceTax && (
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Tag size={14} className="text-[#1D9E75]" />
+                      <span className="text-[10px] font-black text-gray-400 uppercase">{t('avgServiceTax')}</span>
+                    </div>
+                    <p className="text-xl font-black text-gray-900">{selectedDishStats.avgServiceTax}%</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -454,6 +472,16 @@ export default function RestaurantDetailPage() {
                   <span className="text-xs font-black text-gray-900">
                     {review.price_paid.toLocaleString()} {t('som')}
                   </span>
+                  {review.price_per_pax && (
+                    <span className="text-[10px] font-bold text-gray-500">
+                      ({review.price_per_pax.toLocaleString()} {t('som')}/{t('pax')})
+                    </span>
+                  )}
+                  {review.service_tax && (
+                    <span className="text-[10px] font-bold text-gray-500">
+                      + {review.service_tax}% {t('service')}
+                    </span>
+                  )}
                 </div>
 
                 <p className="text-sm text-gray-600 leading-relaxed italic">

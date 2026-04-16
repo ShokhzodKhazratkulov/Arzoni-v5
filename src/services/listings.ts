@@ -55,6 +55,16 @@ export const getListingsWithStats = async (filters: {
       const avgRating = dishReviews.reduce((sum, r) => sum + r.rating, 0) / dishReviews.length;
       const popularity = totalReviewCount > 0 ? dishReviews.length / totalReviewCount : 0;
 
+      const reviewsWithPax = dishReviews.filter(r => r.price_per_pax !== null && r.price_per_pax !== undefined);
+      const avgPricePerPax = reviewsWithPax.length > 0 
+        ? reviewsWithPax.reduce((sum, r) => sum + (r.price_per_pax || 0), 0) / reviewsWithPax.length 
+        : undefined;
+
+      const reviewsWithTax = dishReviews.filter(r => r.service_tax !== null && r.service_tax !== undefined);
+      const avgServiceTax = reviewsWithTax.length > 0 
+        ? reviewsWithTax.reduce((sum, r) => sum + (r.service_tax || 0), 0) / reviewsWithTax.length 
+        : undefined;
+
       // Find best comment (most liked)
       const reviewsWithComments = dishReviews.filter(r => r.text && r.text.trim().length > 0);
       const bestReview = reviewsWithComments.length > 0
@@ -67,6 +77,8 @@ export const getListingsWithStats = async (filters: {
         avgRating,
         reviewCount: dishReviews.length,
         popularity,
+        avgPricePerPax,
+        avgServiceTax,
         bestComment: bestReview?.text,
         displayName: dishName
       };
@@ -162,6 +174,16 @@ export const getListingById = async (id: string) => {
     const avgPrice = dishReviews.reduce((sum, r) => sum + r.price_paid, 0) / dishReviews.length;
     const avgRating = dishReviews.reduce((sum, r) => sum + r.rating, 0) / dishReviews.length;
     const popularity = totalReviewCount > 0 ? dishReviews.length / totalReviewCount : 0;
+
+    const reviewsWithPax = dishReviews.filter(r => r.price_per_pax !== null && r.price_per_pax !== undefined);
+    const avgPricePerPax = reviewsWithPax.length > 0 
+      ? reviewsWithPax.reduce((sum, r) => sum + (r.price_per_pax || 0), 0) / reviewsWithPax.length 
+      : undefined;
+
+    const reviewsWithTax = dishReviews.filter(r => r.service_tax !== null && r.service_tax !== undefined);
+    const avgServiceTax = reviewsWithTax.length > 0 
+      ? reviewsWithTax.reduce((sum, r) => sum + (r.service_tax || 0), 0) / reviewsWithTax.length 
+      : undefined;
 
     // Find best comment (most liked)
     const reviewsWithComments = dishReviews.filter(r => r.text && r.text.trim().length > 0);
