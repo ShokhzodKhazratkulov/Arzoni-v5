@@ -40,13 +40,13 @@ export const uploadImage = async (file: File, path: string) => {
   const filePath = `${path}/${fileName}`;
 
   const { error: uploadError } = await supabase.storage
-    .from('photos')
+    .from('restaurant-photos')
     .upload(filePath, fileToUpload);
 
   if (uploadError) throw uploadError;
 
   const { data: { publicUrl } } = supabase.storage
-    .from('photos')
+    .from('restaurant-photos')
     .getPublicUrl(filePath);
 
   return publicUrl;

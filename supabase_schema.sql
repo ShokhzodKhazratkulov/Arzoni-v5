@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS reviews (
   photo_urls TEXT[] DEFAULT '{}',
   likes INTEGER DEFAULT 0,
   dislikes INTEGER DEFAULT 0,
+  price_per_pax NUMERIC,
+  service_tax NUMERIC,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -107,14 +109,14 @@ CREATE POLICY "Allow authenticated to update listings" ON listings FOR UPDATE TO
 
 DROP POLICY IF EXISTS "Allow admin to delete listings" ON listings;
 CREATE POLICY "Allow admin to delete listings" ON listings FOR DELETE USING (
-  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) IN ('khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com')
+  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) = 'khazratkulovshokhzod@gmail.com'
 );
 
 -- 4. Trigger for Admin Fields
 CREATE OR REPLACE FUNCTION protect_admin_fields()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF (LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) NOT IN ('khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com')) THEN
+  IF (LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) != 'khazratkulovshokhzod@gmail.com') THEN
     IF (TG_OP = 'UPDATE') THEN
       NEW.is_sponsored = OLD.is_sponsored;
       NEW.is_verified = OLD.is_verified;
@@ -144,7 +146,7 @@ CREATE POLICY "Allow authenticated to update reviews" ON reviews FOR UPDATE TO a
 
 DROP POLICY IF EXISTS "Allow admin to delete reviews" ON reviews;
 CREATE POLICY "Allow admin to delete reviews" ON reviews FOR DELETE USING (
-  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) IN ('khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com')
+  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) = 'khazratkulovshokhzod@gmail.com'
 );
 
 -- 6. Banners Policies
@@ -153,22 +155,27 @@ CREATE POLICY "Allow public read access on banners" ON banners FOR SELECT USING 
 
 DROP POLICY IF EXISTS "Allow admin to insert banners" ON banners;
 CREATE POLICY "Allow admin to insert banners" ON banners FOR INSERT WITH CHECK (
-  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) IN ('khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com')
+  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) = 'khazratkulovshokhzod@gmail.com'
 );
 
 DROP POLICY IF EXISTS "Allow admin to update banners" ON banners;
 CREATE POLICY "Allow admin to update banners" ON banners FOR UPDATE USING (
-  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) IN ('khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com')
+  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) = 'khazratkulovshokhzod@gmail.com'
 ) WITH CHECK (
-  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) IN ('khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com')
+  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) = 'khazratkulovshokhzod@gmail.com'
 );
 
 DROP POLICY IF EXISTS "Allow admin to delete banners" ON banners;
 CREATE POLICY "Allow admin to delete banners" ON banners FOR DELETE USING (
-  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) IN ('khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com')
+  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) = 'khazratkulovshokhzod@gmail.com'
 );
 
--- 7. Storage Policies
+-- 7. Storage Setup & Policies
+-- Create the bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('restaurant-photos', 'restaurant-photos', true)
+ON CONFLICT (id) DO NOTHING;
+
 -- Allow public read access to restaurant-photos
 DROP POLICY IF EXISTS "Public Access" ON storage.objects;
 CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'restaurant-photos');
@@ -182,9 +189,9 @@ DROP POLICY IF EXISTS "Admin Manage" ON storage.objects;
 CREATE POLICY "Admin Manage" ON storage.objects FOR ALL TO authenticated
 USING (
   bucket_id = 'restaurant-photos' AND 
-  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) IN ('khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com')
+  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) = 'khazratkulovshokhzod@gmail.com'
 )
 WITH CHECK (
   bucket_id = 'restaurant-photos' AND 
-  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) IN ('khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com')
+  LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', ''))) = 'khazratkulovshokhzod@gmail.com'
 );

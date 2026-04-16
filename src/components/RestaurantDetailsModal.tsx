@@ -188,13 +188,13 @@ export default function RestaurantDetailsModal({
       const filePath = `restaurants/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('photos')
+        .from('restaurant-photos')
         .upload(filePath, compressedFile);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('photos')
+        .from('restaurant-photos')
         .getPublicUrl(filePath);
 
       const { error: updateError } = await supabase

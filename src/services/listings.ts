@@ -197,6 +197,8 @@ export const getListingById = async (id: string) => {
       avgRating,
       reviewCount: dishReviews.length,
       popularity,
+      avgPricePerPax,
+      avgServiceTax,
       bestComment: bestReview?.text,
       displayName: dishName
     };
