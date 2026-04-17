@@ -250,20 +250,32 @@ const MapContent = ({ restaurants, onAddRestaurant, selectedDishes = [], customD
           </AdvancedMarker>
         )}
 
-        {selectedRestaurant && (
-          <InfoWindow
-            position={{ lat: selectedRestaurant.latitude, lng: selectedRestaurant.longitude }}
-            onCloseClick={() => setSelectedId(null)}
-          >
-            <MapPopupCard 
-              restaurantName={selectedRestaurant.name}
-              address={selectedRestaurant.address}
-              openingHoursLabel={selectedRestaurant.working_hours}
-              selectedDish={selectedDishes[0] || (selectedCategory === 'food' ? 'Osh' : 'T-shirt')}
-              dishStatsForSelected={selectedRestaurant.dishStats?.[selectedDishes[0] || (selectedCategory === 'food' ? 'Osh' : 'T-shirt')] || null}
-              onOpenDetails={() => setIsDetailsOpen(true)}
-              onOpenDirections={() => {
-                if (selectedRestaurant) {
+        {selectedRestaurant && (() => {
+          const customStats = (() => {
+            if (selectedId === selectedRestaurant.id && selectedDishes.includes('custom') && customDish && selectedRestaurant.dishStats) {
+              const matchingKey = Object.keys(selectedRestaurant.dishStats).find(key => 
+                key.toLowerCase() === customDish.toLowerCase()
+              );
+              return matchingKey ? selectedRestaurant.dishStats[matchingKey] : null;
+            }
+            return null;
+          })();
+
+          const statsForPopup = customStats || (selectedRestaurant.dishStats?.[selectedDishes[0] || (selectedCategory === 'food' ? 'Osh' : 'T-shirt')] || null);
+
+          return (
+            <InfoWindow
+              position={{ lat: selectedRestaurant.latitude, lng: selectedRestaurant.longitude }}
+              onCloseClick={() => setSelectedId(null)}
+            >
+              <MapPopupCard 
+                restaurantName={selectedRestaurant.name}
+                address={selectedRestaurant.address}
+                openingHoursLabel={selectedRestaurant.working_hours}
+                selectedDish={customStats ? customDish! : (selectedDishes[0] || (selectedCategory === 'food' ? 'Osh' : 'T-shirt'))}
+                dishStatsForSelected={statsForPopup}
+                onOpenDetails={() => setIsDetailsOpen(true)}
+                onOpenDirections={() => {
                   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
                   if (isIOS) {
                     setIsDirectionsOpen(true);
@@ -271,12 +283,12 @@ const MapContent = ({ restaurants, onAddRestaurant, selectedDishes = [], customD
                     const url = `geo:${selectedRestaurant.latitude},${selectedRestaurant.longitude}?q=${selectedRestaurant.latitude},${selectedRestaurant.longitude}(${encodeURIComponent(selectedRestaurant.name)})`;
                     window.location.href = url;
                   }
-                }
-              }}
-              t={t}
-            />
-          </InfoWindow>
-        )}
+                }}
+                t={t}
+              />
+            </InfoWindow>
+          );
+        })()}
       </Map>
 
       {/* Floating Controls */}

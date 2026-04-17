@@ -109,6 +109,7 @@ function AppContent() {
   const [sortOption, setSortOption] = useState<SortOption>('price_asc');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [isAddRestaurantOpen, setIsAddRestaurantOpen] = useState(false);
+  const [customDish, setCustomDish] = useState<string>('');
 
   const fetchData = async () => {
     setLoading(true);
@@ -147,10 +148,20 @@ function AppContent() {
 
   const filteredListings = useMemo(() => {
     return listings.filter(listing => {
+      // If "custom" dish is selected, we filter by the custom string
+      if (selectedDish === 'custom' && customDish) {
+        // Check if any review has this dish or if it matches the listing's popular dishes
+        const matchesName = listing.name.toLowerCase().includes(customDish.toLowerCase());
+        const matchesDish = listing.dishes?.some(d => d.toLowerCase().includes(customDish.toLowerCase()));
+        const hasSpecificReview = listing.dishStats && Object.keys(listing.dishStats).some(d => d.toLowerCase().includes(customDish.toLowerCase()));
+        
+        if (!matchesName && !matchesDish && !hasSpecificReview) return false;
+      }
+
       // If "All" is selected, we use the listing's overall avg_price
       // Otherwise we use the stats for the specific dish
-      const stats = selectedDish === 'All' ? null : listing.dishStats?.[selectedDish];
-      const priceToFilter = selectedDish === 'All' ? listing.avg_price : stats?.avgPrice;
+      const stats = (selectedDish === 'All' || selectedDish === 'custom') ? null : listing.dishStats?.[selectedDish];
+      const priceToFilter = (selectedDish === 'All' || selectedDish === 'custom') ? listing.avg_price : stats?.avgPrice;
       
       // Price filter
       let matchesPrice = true;
@@ -166,14 +177,11 @@ function AppContent() {
 
       return matchesPrice;
     });
-  }, [listings, selectedDish, selectedPriceRange, customPrice, selectedCategory]);
+  }, [listings, selectedDish, selectedPriceRange, customPrice, selectedCategory, customDish]);
 
   const filteredBanners = useMemo(() => {
-    // In the new schema, banners might not have a category directly, 
-    // but we can filter by the linked listing's category if needed.
-    // For now, we'll assume banners are relevant to the selected category or generic.
-    return banners;
-  }, [banners]);
+    return banners.filter(banner => banner.category === selectedCategory);
+  }, [banners, selectedCategory]);
 
   useEffect(() => {
     if (filteredBanners.length <= 1 || isBannerPaused) return;
@@ -315,8 +323,8 @@ function AppContent() {
                 setSelectedPriceRange={setSelectedPriceRange}
                 customPrice={customPrice}
                 setCustomPrice={setCustomPrice}
-                customDish={''}
-                setCustomDish={() => {}}
+                customDish={customDish}
+                setCustomDish={setCustomDish}
               />
 
               {/* View Mode Toggle */}
@@ -382,6 +390,7 @@ function AppContent() {
                   selectedDishes={[selectedDish]}
                   selectedCategory={selectedCategory}
                   isFilterActive={selectedDish !== 'All' || selectedPriceRange !== 'all'}
+                  customDish={customDish}
                 />
               )}
             </main>

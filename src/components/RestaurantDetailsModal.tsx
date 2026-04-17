@@ -64,6 +64,55 @@ export default function RestaurantDetailsModal({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const activeDishStats = useMemo(() => {
+    if (!selectedDishes.length) return null;
+    
+    const activeDishId = (() => {
+      if (selectedDishes.includes('custom') && customDish) {
+        const normalizedSearch = customDish.toLowerCase();
+        const matchingKey = Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedSearch);
+        return matchingKey || customDish;
+      }
+      
+      const foundId = selectedDishes.find(id => {
+        const normalizedId = id.toLowerCase();
+        const matchingKey = Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedId);
+        return matchingKey && restaurant.dishStats[matchingKey]?.reviewCount;
+      });
+      
+      if (foundId) {
+        const normalizedId = foundId.toLowerCase();
+        return Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedId) || foundId;
+      }
+      
+      const firstId = selectedDishes[0];
+      const normalizedFirstId = firstId.toLowerCase();
+      return Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedFirstId) || firstId;
+    })();
+
+    if (!activeDishId) return null;
+    
+    return {
+      id: activeDishId,
+      stats: restaurant.dishStats?.[activeDishId] || null
+    };
+  }, [restaurant.dishStats, selectedDishes, customDish]);
+
+  const displayPrice = useMemo(() => {
+    return Math.round(activeDishStats?.stats ? activeDishStats.stats.avgPrice : (restaurant.avg_price || 0));
+  }, [activeDishStats, restaurant.avg_price]);
+
+  const priceColorClass = useMemo(() => {
+    if (selectedCategory === 'clothes') {
+      if (displayPrice < 100000) return 'text-green-600';
+      if (displayPrice <= 170000) return 'text-amber-600';
+      return 'text-red-600';
+    }
+    if (displayPrice < 40000) return 'text-green-600';
+    if (displayPrice <= 70000) return 'text-amber-600';
+    return 'text-red-600';
+  }, [displayPrice, selectedCategory]);
+
   const isSponsoredValid = useMemo(() => {
     return restaurant.is_sponsored;
   }, [restaurant.is_sponsored]);
@@ -436,67 +485,15 @@ export default function RestaurantDetailsModal({
             {/* Info Grid */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">{t('price')}</p>
-                <p className={`text-sm font-black ${(() => {
-                  const activeDishId = (() => {
-                    if (selectedDishes.length === 0) return null;
-                    if (selectedDishes.includes('custom') && customDish) {
-                      const normalizedSearch = customDish.toLowerCase();
-                      const matchingKey = Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedSearch);
-                      return matchingKey || customDish;
-                    }
-                    const foundId = selectedDishes.find(id => {
-                      const normalizedId = id.toLowerCase();
-                      const matchingKey = Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedId);
-                      return matchingKey && restaurant.dishStats[matchingKey]?.reviewCount;
-                    });
-                    if (foundId) {
-                      const normalizedId = foundId.toLowerCase();
-                      return Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedId) || foundId;
-                    }
-                    const firstId = selectedDishes[0];
-                    const normalizedFirstId = firstId.toLowerCase();
-                    return Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedFirstId) || firstId;
-                  })();
-
-                  const p = Math.round(activeDishId && restaurant.dishStats?.[activeDishId] 
-                    ? restaurant.dishStats[activeDishId].avgPrice 
-                    : (restaurant.avg_price || 0));
-                  if (selectedCategory === 'clothes') {
-                    if (p < 100000) return 'text-green-600';
-                    if (p <= 170000) return 'text-amber-600';
-                    return 'text-red-600';
-                  }
-                  if (p < 40000) return 'text-green-600';
-                  if (p <= 70000) return 'text-amber-600';
-                  return 'text-red-600';
-                })()}`}>
-                  {(() => {
-                    const activeDishId = (() => {
-                      if (selectedDishes.length === 0) return null;
-                      if (selectedDishes.includes('custom') && customDish) {
-                        const normalizedSearch = customDish.toLowerCase();
-                        const matchingKey = Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedSearch);
-                        return matchingKey || customDish;
-                      }
-                      const foundId = selectedDishes.find(id => {
-                        const normalizedId = id.toLowerCase();
-                        const matchingKey = Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedId);
-                        return matchingKey && restaurant.dishStats[matchingKey]?.reviewCount;
-                      });
-                      if (foundId) {
-                        const normalizedId = foundId.toLowerCase();
-                        return Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedId) || foundId;
-                      }
-                      const firstId = selectedDishes[0];
-                      const normalizedFirstId = firstId.toLowerCase();
-                      return Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedFirstId) || firstId;
-                    })();
-
-                    return Math.round(activeDishId && restaurant.dishStats?.[activeDishId] 
-                      ? restaurant.dishStats[activeDishId].avgPrice 
-                      : (restaurant.avg_price || 0)).toLocaleString();
-                  })()} {t('som')}
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">
+                  {t('price')} {activeDishStats?.id && activeDishStats.id !== 'All' ? `(${(() => {
+                    const currentTypes = selectedCategory === 'food' ? DISH_TYPES : CLOTHING_TYPES;
+                    const found = currentTypes.find(d => d.id === activeDishStats.id);
+                    return found ? t(found.label) : activeDishStats.id;
+                  })()})` : ''}
+                </p>
+                <p className={`text-sm font-black ${priceColorClass}`}>
+                  {displayPrice.toLocaleString()} {t('som')}
                 </p>
               </div>
               <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">

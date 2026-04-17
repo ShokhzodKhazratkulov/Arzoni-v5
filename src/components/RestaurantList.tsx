@@ -14,6 +14,7 @@ interface RestaurantListProps {
   selectedDishes: string[];
   selectedCategory: 'food' | 'clothes';
   isFilterActive: boolean;
+  customDish?: string;
 }
 
 export default function RestaurantList({ 
@@ -24,14 +25,18 @@ export default function RestaurantList({
   onAddRestaurantClick,
   selectedDishes, 
   selectedCategory,
-  isFilterActive
+  isFilterActive,
+  customDish
 }: RestaurantListProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const selectedDish = selectedDishes[0] || 'Osh';
 
   const getSortClarification = () => {
-    const dishName = t(`dishes.${selectedDish.toLowerCase()}`, t(`clothes.${selectedDish.toLowerCase()}`, selectedDish));
+    let dishName = t(`dishes.${selectedDish.toLowerCase()}`, t(`clothes.${selectedDish.toLowerCase()}`, selectedDish));
+    if (selectedDish === 'custom' && customDish) {
+      dishName = customDish;
+    }
     
     if (selectedDishes.length > 0 && selectedDish !== 'All') {
       return t(`sort_${sortOption}`, { dish: dishName });
@@ -88,7 +93,17 @@ export default function RestaurantList({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {restaurants.map(restaurant => {
-            const dishStatsForSelected = restaurant.dishStats?.[selectedDish] || null;
+            let dishStatsForSelected = restaurant.dishStats?.[selectedDish] || null;
+
+            // If it's a custom search, try to find a direct match in the restaurant's stats
+            if (selectedDish === 'custom' && customDish && restaurant.dishStats) {
+              const matchingKey = Object.keys(restaurant.dishStats).find(key => 
+                key.toLowerCase() === customDish.toLowerCase()
+              );
+              if (matchingKey) {
+                dishStatsForSelected = restaurant.dishStats[matchingKey];
+              }
+            }
             
             return (
               <RestaurantCard 
@@ -97,7 +112,7 @@ export default function RestaurantList({
                 name={restaurant.name}
                 area={restaurant.address}
                 workingHours={restaurant.working_hours}
-                selectedDish={selectedDish}
+                selectedDish={selectedDish === 'custom' && customDish ? customDish : selectedDish}
                 dishStatsForSelected={dishStatsForSelected}
                 allDishStats={Object.values(restaurant.dishStats || {})}
                 category={selectedCategory}
