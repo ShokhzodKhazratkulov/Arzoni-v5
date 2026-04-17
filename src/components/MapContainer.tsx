@@ -259,8 +259,13 @@ const MapContent = ({ restaurants, onAddRestaurant, selectedDishes = [], customD
               restaurantName={selectedRestaurant.name}
               address={selectedRestaurant.address}
               openingHoursLabel={selectedRestaurant.working_hours}
-              selectedDish={selectedDishes[0] || (selectedCategory === 'food' ? 'Osh' : 'T-shirt')}
-              dishStatsForSelected={selectedRestaurant.dishStats?.[selectedDishes[0] || (selectedCategory === 'food' ? 'Osh' : 'T-shirt')] || null}
+              selectedDish={activeDishId || (selectedCategory === 'food' ? 'Osh' : 'T-shirt')}
+              dishStatsForSelected={(() => {
+                if (!activeDishId) return null;
+                const searchDish = activeDishId.toLowerCase();
+                const matchingKey = Object.keys(selectedRestaurant.dishStats || {}).find(k => k.toLowerCase() === searchDish);
+                return matchingKey ? selectedRestaurant.dishStats?.[matchingKey] : null;
+              })()}
               onOpenDetails={() => setIsDetailsOpen(true)}
               onOpenDirections={() => {
                 if (selectedRestaurant) {

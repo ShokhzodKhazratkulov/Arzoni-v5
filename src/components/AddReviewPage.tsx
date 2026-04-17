@@ -7,7 +7,7 @@ import { supabase } from '../supabase';
 import { useTranslation } from 'react-i18next';
 import { createReview } from '../services/reviews';
 import { getListingById } from '../services/listings';
-import { uploadImage } from '../lib/utils';
+import { uploadImage, cn } from '../lib/utils';
 import { useAuth } from '../lib/AuthContext';
 
 interface AddReviewPageProps {
@@ -18,7 +18,7 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, setIsLoginOpen } = useAuth();
 
   if (!user) {
     return (
@@ -30,7 +30,7 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
           <h2 className="text-2xl font-black text-gray-900">{t('loginRequired')}</h2>
           <p className="text-gray-600">{t('loginToAddReview')}</p>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => setIsLoginOpen(true)}
             className="w-full py-4 bg-[#1D9E75] text-white rounded-2xl font-black text-lg shadow-lg shadow-[#1D9E75]/20 hover:scale-[1.02] transition-transform"
           >
             {t('login')}
@@ -239,7 +239,7 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
           </section>
 
           {/* Price & Rating */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <section className="space-y-4">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
               <label className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-wider">
                 <DollarSign size={16} className="text-[#1D9E75]" />
@@ -258,39 +258,41 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-              <label className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-wider">
-                <DollarSign size={16} className="text-[#1D9E75]" />
-                {t('pricePerPax')}
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="pricePerPax"
-                  placeholder="e.g. 15000"
-                  value={form.pricePerPax}
-                  onChange={handleInputChange}
-                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D9E75] font-bold text-gray-900 pr-16"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">{t('som')}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <label className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-wider">
+                  <DollarSign size={16} className="text-[#1D9E75]" />
+                  {t('pricePerPax')}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="pricePerPax"
+                    placeholder="e.g. 15000"
+                    value={form.pricePerPax}
+                    onChange={handleInputChange}
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D9E75] font-bold text-gray-900 pr-16"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">{t('som')}</span>
+                </div>
               </div>
-            </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-              <label className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-wider">
-                <Tag size={16} className="text-[#1D9E75]" />
-                {t('serviceTax')}
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="serviceTax"
-                  placeholder="e.g. 10"
-                  value={form.serviceTax}
-                  onChange={handleInputChange}
-                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D9E75] font-bold text-gray-900 pr-16"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <label className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-wider">
+                  <Tag size={16} className="text-[#1D9E75]" />
+                  {t('serviceTax')}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="serviceTax"
+                    placeholder="e.g. 10"
+                    value={form.serviceTax}
+                    onChange={handleInputChange}
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D9E75] font-bold text-gray-900 pr-16"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                </div>
               </div>
             </div>
 
@@ -308,10 +310,11 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
                     className="p-1 transition-transform hover:scale-110"
                   >
                     <Star
-                      size={32}
-                      className={`${
+                      size={40}
+                      className={cn(
+                        "transition-all duration-300",
                         star <= form.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'
-                      }`}
+                      )}
                     />
                   </button>
                 ))}

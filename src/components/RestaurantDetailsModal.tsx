@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Star, MapPin, Navigation, User, ThumbsUp, ThumbsDown, MoreVertical, Edit2, Camera, Check, X as CloseIcon, CheckCircle2 } from 'lucide-react';
+import { X, Star, MapPin, Navigation, User, ThumbsUp, ThumbsDown, MoreVertical, Edit2, Camera, Check, X as CloseIcon, CheckCircle2, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Listing, Review } from '../types';
 import { supabase } from '../supabase';
 import { DISH_TYPES, CLOTHING_TYPES } from '../constants';
 import imageCompression from 'browser-image-compression';
 import DirectionsPicker from './DirectionsPicker';
+import { translateBatch } from '../services/translationService';
+import TranslatedText from './TranslatedText';
 
 enum OperationType {
   CREATE = 'create',
@@ -52,10 +54,52 @@ export default function RestaurantDetailsModal({
   customDish,
   selectedCategory
 }: RestaurantDetailsModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [translatedReviews, setTranslatedReviews] = useState<Record<string, string>>({});
+  const [isTranslatingReviews, setIsTranslatingReviews] = useState(false);
   const [loading, setLoading] = useState(true);
   const [restaurant, setRestaurant] = useState<Listing>(initialRestaurant);
+
+  useEffect(() => {
+    const translateReviews = async () => {
+      if (reviews.length === 0) return;
+      
+      setIsTranslatingReviews(true);
+      const comments = reviews.map(r => r.text || '').filter(Boolean);
+      const titles = reviews.map(r => r.title || '').filter(Boolean);
+      const combined = [...comments, ...titles];
+      
+      if (combined.length === 0) {
+        setIsTranslatingReviews(false);
+        return;
+      }
+
+      try {
+        const translated = await translateBatch(combined, i18n.language);
+        const newTranslations: Record<string, string> = {};
+        
+        let idx = 0;
+        reviews.forEach((r) => {
+          if (r.text) {
+            newTranslations[`text_${r.id}`] = translated[idx++];
+          }
+          if (r.title) {
+            newTranslations[`title_${r.id}`] = translated[idx++];
+          }
+        });
+        
+        setTranslatedReviews(newTranslations);
+      } catch (error) {
+        console.error("Review translation error:", error);
+      } finally {
+        setIsTranslatingReviews(false);
+      }
+    };
+
+    translateReviews();
+  }, [reviews, i18n.language]);
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(initialRestaurant.name);
@@ -514,9 +558,11 @@ export default function RestaurantDetailsModal({
             {/* Description */}
             <div>
               <h3 className="text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider">{t('about')}</h3>
-              <p className="text-gray-600 leading-relaxed italic">
-                "{restaurant.description}"
-              </p>
+              <TranslatedText 
+                text={restaurant.description || ''} 
+                className="text-gray-600 leading-relaxed italic block"
+                as="p"
+              />
             </div>
 
             {/* Dishes */}
@@ -551,7 +597,15 @@ export default function RestaurantDetailsModal({
             <div className="border-t border-gray-100 pt-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">{t('communityReviews')}</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-gray-900">{t('communityReviews')}</h3>
+                    {isTranslatingReviews && (
+                      <div className={`flex items-center gap-1.5 text-[10px] font-bold ${themeText} animate-pulse`}>
+                        <Globe size={12} />
+                        {t('loading')}
+                      </div>
+                    )}
+                  </div>
                   <div className={`flex items-center gap-1 ${themeText} text-sm font-bold mt-1`}>
                     <Star size={16} className={`fill-[${themeColor}]`} />
                     <span>{(restaurant.totalAvgRating || 0).toFixed(1)} / 5</span>
@@ -609,9 +663,15 @@ export default function RestaurantDetailsModal({
                           <span className="text-xs font-bold text-gray-900">{review.rating.toFixed(1)}</span>
                         </div>
                       </div>
+
+                      {review.title && (
+                        <p className="text-xs font-black text-gray-900 mb-1 uppercase tracking-wide">
+                          {translatedReviews[`title_${review.id}`] || review.title}
+                        </p>
+                      )}
                       
                       <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                        {review.text}
+                        {translatedReviews[`text_${review.id}`] || review.text}
                       </p>
 
                       {(() => {

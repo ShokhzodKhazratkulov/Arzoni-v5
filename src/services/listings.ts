@@ -55,12 +55,12 @@ export const getListingsWithStats = async (filters: {
       const avgRating = dishReviews.reduce((sum, r) => sum + r.rating, 0) / dishReviews.length;
       const popularity = totalReviewCount > 0 ? dishReviews.length / totalReviewCount : 0;
 
-      const reviewsWithPax = dishReviews.filter(r => r.price_per_pax !== null && r.price_per_pax !== undefined);
+      const reviewsWithPax = dishReviews.filter(r => r.price_per_pax !== null && r.price_per_pax !== undefined && r.price_per_pax > 0);
       const avgPricePerPax = reviewsWithPax.length > 0 
         ? reviewsWithPax.reduce((sum, r) => sum + (r.price_per_pax || 0), 0) / reviewsWithPax.length 
         : undefined;
 
-      const reviewsWithTax = dishReviews.filter(r => r.service_tax !== null && r.service_tax !== undefined);
+      const reviewsWithTax = dishReviews.filter(r => r.service_tax !== null && r.service_tax !== undefined && r.service_tax > 0);
       const avgServiceTax = reviewsWithTax.length > 0 
         ? reviewsWithTax.reduce((sum, r) => sum + (r.service_tax || 0), 0) / reviewsWithTax.length 
         : undefined;
@@ -99,39 +99,57 @@ export const getListingsWithStats = async (filters: {
   // Filter by selected dish if provided
   let filtered = listingsWithStats;
   if (filters.selectedDish && filters.selectedDish !== 'All') {
-    filtered = listingsWithStats.filter(l => l.dishStats && l.dishStats[filters.selectedDish!]);
+    const searchDish = filters.selectedDish.toLowerCase();
+    filtered = listingsWithStats.filter(l => {
+      if (!l.dishStats) return false;
+      // Look for a key that matches case-insensitively
+      const matchingKey = Object.keys(l.dishStats).find(k => k.toLowerCase() === searchDish);
+      return !!matchingKey;
+    });
   }
 
   // Sort
   if (filters.sort === 'price_asc') {
     filtered.sort((a, b) => {
+      const searchDish = filters.selectedDish?.toLowerCase();
+      const matchingKeyA = searchDish && a.dishStats ? Object.keys(a.dishStats).find(k => k.toLowerCase() === searchDish) : null;
+      const matchingKeyB = searchDish && b.dishStats ? Object.keys(b.dishStats).find(k => k.toLowerCase() === searchDish) : null;
+
       const priceA = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (a.dishStats?.[filters.selectedDish]?.avgPrice || Infinity) 
+        ? (matchingKeyA ? a.dishStats?.[matchingKeyA]?.avgPrice : Infinity) 
         : (a.avg_price || Infinity);
       const priceB = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (b.dishStats?.[filters.selectedDish]?.avgPrice || Infinity) 
+        ? (matchingKeyB ? b.dishStats?.[matchingKeyB]?.avgPrice : Infinity) 
         : (b.avg_price || Infinity);
-      return priceA - priceB;
+      return (priceA as number) - (priceB as number);
     });
   } else if (filters.sort === 'price_desc') {
     filtered.sort((a, b) => {
+      const searchDish = filters.selectedDish?.toLowerCase();
+      const matchingKeyA = searchDish && a.dishStats ? Object.keys(a.dishStats).find(k => k.toLowerCase() === searchDish) : null;
+      const matchingKeyB = searchDish && b.dishStats ? Object.keys(b.dishStats).find(k => k.toLowerCase() === searchDish) : null;
+
       const priceA = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (a.dishStats?.[filters.selectedDish]?.avgPrice || 0) 
+        ? (matchingKeyA ? a.dishStats?.[matchingKeyA]?.avgPrice : 0) 
         : (a.avg_price || 0);
       const priceB = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (b.dishStats?.[filters.selectedDish]?.avgPrice || 0) 
+        ? (matchingKeyB ? b.dishStats?.[matchingKeyB]?.avgPrice : 0) 
         : (b.avg_price || 0);
-      return priceB - priceA;
+      return (priceB as number) - (priceA as number);
     });
   } else if (filters.sort === 'rating') {
     filtered.sort((a, b) => {
+      const searchDish = filters.selectedDish?.toLowerCase();
+      const matchingKeyA = searchDish && a.dishStats ? Object.keys(a.dishStats).find(k => k.toLowerCase() === searchDish) : null;
+      const matchingKeyB = searchDish && b.dishStats ? Object.keys(b.dishStats).find(k => k.toLowerCase() === searchDish) : null;
+
       const ratingA = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (a.dishStats?.[filters.selectedDish]?.avgRating || 0) 
+        ? (matchingKeyA ? a.dishStats?.[matchingKeyA]?.avgRating : 0) 
         : (a.totalAvgRating || 0);
       const ratingB = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (b.dishStats?.[filters.selectedDish]?.avgRating || 0) 
+        ? (matchingKeyB ? b.dishStats?.[matchingKeyB]?.avgRating : 0) 
         : (b.totalAvgRating || 0);
-      return ratingB - ratingA;
+      return (ratingB as number) - (ratingA as number);
     });
   }
 
@@ -175,12 +193,12 @@ export const getListingById = async (id: string) => {
     const avgRating = dishReviews.reduce((sum, r) => sum + r.rating, 0) / dishReviews.length;
     const popularity = totalReviewCount > 0 ? dishReviews.length / totalReviewCount : 0;
 
-    const reviewsWithPax = dishReviews.filter(r => r.price_per_pax !== null && r.price_per_pax !== undefined);
+    const reviewsWithPax = dishReviews.filter(r => r.price_per_pax !== null && r.price_per_pax !== undefined && r.price_per_pax > 0);
     const avgPricePerPax = reviewsWithPax.length > 0 
       ? reviewsWithPax.reduce((sum, r) => sum + (r.price_per_pax || 0), 0) / reviewsWithPax.length 
       : undefined;
 
-    const reviewsWithTax = dishReviews.filter(r => r.service_tax !== null && r.service_tax !== undefined);
+    const reviewsWithTax = dishReviews.filter(r => r.service_tax !== null && r.service_tax !== undefined && r.service_tax > 0);
     const avgServiceTax = reviewsWithTax.length > 0 
       ? reviewsWithTax.reduce((sum, r) => sum + (r.service_tax || 0), 0) / reviewsWithTax.length 
       : undefined;
