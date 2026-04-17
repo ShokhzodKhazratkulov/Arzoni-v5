@@ -181,14 +181,23 @@ export const getListingsWithStats = async (filters: {
   }
 
   // Sort helper function to find specific dish price accurately
-  const getDishPrice = (listing: Listing, dishId?: string, customStr?: string) => {
+  const getDishPrice = (listing: Listing, dishId?: string, customStr?: string, resolvedIds: string[] = []) => {
     if (!dishId || dishId === 'All') return listing.avg_price || Infinity;
     
     let stats = null;
     if (dishId === 'custom' && customStr) {
       const search = customStr.toLowerCase();
-      const matchingKey = Object.keys(listing.dishStats || {}).find(k => k.toLowerCase() === search);
-      stats = matchingKey ? listing.dishStats![matchingKey] : null;
+      // Try resolved concept IDs first
+      const conceptKey = Object.keys(listing.dishStats || {}).find(k => resolvedIds.includes(k));
+      if (conceptKey) {
+        stats = listing.dishStats![conceptKey];
+      } else {
+        // Fallback to fuzzy text match
+        const matchingKey = Object.keys(listing.dishStats || {}).find(k => 
+          k.toLowerCase().includes(search) || search.includes(k.toLowerCase())
+        );
+        stats = matchingKey ? listing.dishStats![matchingKey] : null;
+      }
     } else {
       stats = listing.dishStats?.[dishId];
     }
@@ -196,14 +205,23 @@ export const getListingsWithStats = async (filters: {
     return stats ? stats.avgPrice : (listing.avg_price || Infinity);
   };
 
-  const getDishRating = (listing: Listing, dishId?: string, customStr?: string) => {
+  const getDishRating = (listing: Listing, dishId?: string, customStr?: string, resolvedIds: string[] = []) => {
     if (!dishId || dishId === 'All') return listing.totalAvgRating || 0;
     
     let stats = null;
     if (dishId === 'custom' && customStr) {
       const search = customStr.toLowerCase();
-      const matchingKey = Object.keys(listing.dishStats || {}).find(k => k.toLowerCase() === search);
-      stats = matchingKey ? listing.dishStats![matchingKey] : null;
+      // Try resolved concept IDs first
+      const conceptKey = Object.keys(listing.dishStats || {}).find(k => resolvedIds.includes(k));
+      if (conceptKey) {
+        stats = listing.dishStats![conceptKey];
+      } else {
+        // Fallback to fuzzy text match
+        const matchingKey = Object.keys(listing.dishStats || {}).find(k => 
+          k.toLowerCase().includes(search) || search.includes(k.toLowerCase())
+        );
+        stats = matchingKey ? listing.dishStats![matchingKey] : null;
+      }
     } else {
       stats = listing.dishStats?.[dishId];
     }
@@ -213,11 +231,11 @@ export const getListingsWithStats = async (filters: {
 
   // Sort
   if (filters.sort === 'price_asc') {
-    filtered.sort((a, b) => getDishPrice(a, filters.selectedDish, filters.customDish) - getDishPrice(b, filters.selectedDish, filters.customDish));
+    filtered.sort((a, b) => getDishPrice(a, filters.selectedDish, filters.customDish, resolvedConceptIds) - getDishPrice(b, filters.selectedDish, filters.customDish, resolvedConceptIds));
   } else if (filters.sort === 'price_desc') {
-    filtered.sort((a, b) => getDishPrice(b, filters.selectedDish, filters.customDish) - getDishPrice(a, filters.selectedDish, filters.customDish));
+    filtered.sort((a, b) => getDishPrice(b, filters.selectedDish, filters.customDish, resolvedConceptIds) - getDishPrice(a, filters.selectedDish, filters.customDish, resolvedConceptIds));
   } else if (filters.sort === 'rating') {
-    filtered.sort((a, b) => getDishRating(b, filters.selectedDish, filters.customDish) - getDishRating(a, filters.selectedDish, filters.customDish));
+    filtered.sort((a, b) => getDishRating(b, filters.selectedDish, filters.customDish, resolvedConceptIds) - getDishRating(a, filters.selectedDish, filters.customDish, resolvedConceptIds));
   }
 
   // Always put sponsored first

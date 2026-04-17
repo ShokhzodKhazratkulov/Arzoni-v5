@@ -40,9 +40,13 @@ export default function RestaurantCard({
   const popularityPercent = dishStatsForSelected ? Math.round(dishStatsForSelected.popularity * 100) : 0;
   const isLowReviewCount = dishStatsForSelected?.reviewCount === 1;
 
-  const getDishLabel = (dish: string) => {
+  const getDishLabel = (dish: string, stats?: DishStats) => {
     if (dish === 'All') {
       return category === 'food' ? t('allDishes') : t('allClothes');
+    }
+    // If we have stats with a display name, usually more accurate for custom results
+    if (stats?.displayName && stats.displayName !== dish) {
+        return stats.displayName;
     }
     return t(`dishes.${dish.toLowerCase()}`, t(`clothes.${dish.toLowerCase()}`, dish));
   };
@@ -70,7 +74,7 @@ export default function RestaurantCard({
         <div className="flex justify-between items-center py-2 border-y border-gray-50">
           <div className="flex flex-col">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              {t('formPrice')} ({getDishLabel(selectedDish)})
+              {t('formPrice')} ({getDishLabel(selectedDish, dishStatsForSelected)})
             </span>
             <span className={`font-black text-[#1D9E75] ${isLowReviewCount ? 'text-base' : 'text-lg'}`}>
               {dishStatsForSelected.avgPrice.toLocaleString()} {t('som')}
@@ -107,7 +111,7 @@ export default function RestaurantCard({
         {dishStatsForSelected && (
           <div className="bg-gray-50 rounded-xl px-3 py-2">
             <p className="text-xs font-medium text-gray-600">
-              <span className="font-black text-[#1D9E75]">{popularityPercent}%</span> {t('popularity')} <span className="font-black">{getDishLabel(selectedDish)}</span>
+              <span className="font-black text-[#1D9E75]">{popularityPercent}%</span> {t('popularity')} <span className="font-black">{getDishLabel(selectedDish, dishStatsForSelected)}</span>
             </p>
           </div>
         )}
@@ -138,7 +142,7 @@ export default function RestaurantCard({
                   : 'bg-white border border-gray-100 text-gray-500'
               }`}
             >
-              {getDishLabel(stats.name)}
+              {getDishLabel(stats.name, stats)}
             </span>
           ))}
         </div>

@@ -94,14 +94,20 @@ export default function RestaurantList({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {restaurants.map(restaurant => {
             let dishStatsForSelected = restaurant.dishStats?.[selectedDish] || null;
+            let activeMatchKey = selectedDish;
 
-            // If it's a custom search, try to find a direct match in the restaurant's stats
+            // If it's a custom search, try to find a match in the restaurant's stats
             if (selectedDish === 'custom' && customDish && restaurant.dishStats) {
+              const search = customDish.toLowerCase();
               const matchingKey = Object.keys(restaurant.dishStats).find(key => 
-                key.toLowerCase() === customDish.toLowerCase()
+                key.toLowerCase() === search || 
+                key.toLowerCase().includes(search) || 
+                search.includes(key.toLowerCase())
               );
+              
               if (matchingKey) {
                 dishStatsForSelected = restaurant.dishStats[matchingKey];
+                activeMatchKey = matchingKey;
               }
             }
             
@@ -112,7 +118,7 @@ export default function RestaurantList({
                 name={restaurant.name}
                 area={restaurant.address}
                 workingHours={restaurant.working_hours}
-                selectedDish={selectedDish === 'custom' && customDish ? customDish : selectedDish}
+                selectedDish={activeMatchKey === 'custom' && customDish ? customDish : activeMatchKey}
                 dishStatsForSelected={dishStatsForSelected}
                 allDishStats={Object.values(restaurant.dishStats || {})}
                 category={selectedCategory}
