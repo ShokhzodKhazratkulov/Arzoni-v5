@@ -99,57 +99,39 @@ export const getListingsWithStats = async (filters: {
   // Filter by selected dish if provided
   let filtered = listingsWithStats;
   if (filters.selectedDish && filters.selectedDish !== 'All') {
-    const searchDish = filters.selectedDish.toLowerCase();
-    filtered = listingsWithStats.filter(l => {
-      if (!l.dishStats) return false;
-      // Look for a key that matches case-insensitively
-      const matchingKey = Object.keys(l.dishStats).find(k => k.toLowerCase() === searchDish);
-      return !!matchingKey;
-    });
+    filtered = listingsWithStats.filter(l => l.dishStats && l.dishStats[filters.selectedDish!]);
   }
 
   // Sort
   if (filters.sort === 'price_asc') {
     filtered.sort((a, b) => {
-      const searchDish = filters.selectedDish?.toLowerCase();
-      const matchingKeyA = searchDish && a.dishStats ? Object.keys(a.dishStats).find(k => k.toLowerCase() === searchDish) : null;
-      const matchingKeyB = searchDish && b.dishStats ? Object.keys(b.dishStats).find(k => k.toLowerCase() === searchDish) : null;
-
       const priceA = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (matchingKeyA ? a.dishStats?.[matchingKeyA]?.avgPrice : Infinity) 
+        ? (a.dishStats?.[filters.selectedDish]?.avgPrice || Infinity) 
         : (a.avg_price || Infinity);
       const priceB = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (matchingKeyB ? b.dishStats?.[matchingKeyB]?.avgPrice : Infinity) 
+        ? (b.dishStats?.[filters.selectedDish]?.avgPrice || Infinity) 
         : (b.avg_price || Infinity);
-      return (priceA as number) - (priceB as number);
+      return priceA - priceB;
     });
   } else if (filters.sort === 'price_desc') {
     filtered.sort((a, b) => {
-      const searchDish = filters.selectedDish?.toLowerCase();
-      const matchingKeyA = searchDish && a.dishStats ? Object.keys(a.dishStats).find(k => k.toLowerCase() === searchDish) : null;
-      const matchingKeyB = searchDish && b.dishStats ? Object.keys(b.dishStats).find(k => k.toLowerCase() === searchDish) : null;
-
       const priceA = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (matchingKeyA ? a.dishStats?.[matchingKeyA]?.avgPrice : 0) 
+        ? (a.dishStats?.[filters.selectedDish]?.avgPrice || 0) 
         : (a.avg_price || 0);
       const priceB = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (matchingKeyB ? b.dishStats?.[matchingKeyB]?.avgPrice : 0) 
+        ? (b.dishStats?.[filters.selectedDish]?.avgPrice || 0) 
         : (b.avg_price || 0);
-      return (priceB as number) - (priceA as number);
+      return priceB - priceA;
     });
   } else if (filters.sort === 'rating') {
     filtered.sort((a, b) => {
-      const searchDish = filters.selectedDish?.toLowerCase();
-      const matchingKeyA = searchDish && a.dishStats ? Object.keys(a.dishStats).find(k => k.toLowerCase() === searchDish) : null;
-      const matchingKeyB = searchDish && b.dishStats ? Object.keys(b.dishStats).find(k => k.toLowerCase() === searchDish) : null;
-
       const ratingA = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (matchingKeyA ? a.dishStats?.[matchingKeyA]?.avgRating : 0) 
+        ? (a.dishStats?.[filters.selectedDish]?.avgRating || 0) 
         : (a.totalAvgRating || 0);
       const ratingB = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (matchingKeyB ? b.dishStats?.[matchingKeyB]?.avgRating : 0) 
+        ? (b.dishStats?.[filters.selectedDish]?.avgRating || 0) 
         : (b.totalAvgRating || 0);
-      return (ratingB as number) - (ratingA as number);
+      return ratingB - ratingA;
     });
   }
 

@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { useMemo } from 'react';
 import { Listing, SortOption, DishStats } from '../types';
 import RestaurantCard from './RestaurantCard';
 import { ArrowUpDown } from 'lucide-react';
@@ -13,7 +12,6 @@ interface RestaurantListProps {
   onAddReview: (restaurant: Listing) => void;
   onAddRestaurantClick: () => void;
   selectedDishes: string[];
-  customDish?: string;
   selectedCategory: 'food' | 'clothes';
   isFilterActive: boolean;
 }
@@ -25,34 +23,17 @@ export default function RestaurantList({
   onAddReview, 
   onAddRestaurantClick,
   selectedDishes, 
-  customDish,
   selectedCategory,
   isFilterActive
 }: RestaurantListProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  
-  const activeDishId = useMemo(() => {
-    const firstDish = selectedDishes && selectedDishes[0];
-    if (firstDish === 'custom' && customDish) {
-      return customDish;
-    }
-    return firstDish || (selectedCategory === 'food' ? 'Osh' : 'T-shirt');
-  }, [selectedDishes, customDish, selectedCategory]);
-
-  const getDishLabel = (dishId: string) => {
-    if (!dishId) return '';
-    if (dishId === 'All') return selectedCategory === 'food' ? t('allDishes') : t('allClothes');
-    const isCustom = selectedDishes[0] === 'custom';
-    if (isCustom) return dishId;
-    const lowerId = String(dishId).toLowerCase();
-    return t(`dishes.${lowerId}`, t(`clothes.${lowerId}`, String(dishId)));
-  };
+  const selectedDish = selectedDishes[0] || 'Osh';
 
   const getSortClarification = () => {
-    const dishName = getDishLabel(activeDishId);
+    const dishName = t(`dishes.${selectedDish.toLowerCase()}`, t(`clothes.${selectedDish.toLowerCase()}`, selectedDish));
     
-    if (selectedDishes.length > 0 && selectedDishes[0] !== 'All') {
+    if (selectedDishes.length > 0 && selectedDish !== 'All') {
       return t(`sort_${sortOption}`, { dish: dishName });
     }
     
@@ -107,10 +88,7 @@ export default function RestaurantList({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {restaurants.map(restaurant => {
-            // Logic to find matching key case-insensitively for custom dish
-            const searchDish = String(activeDishId).toLowerCase();
-            const matchingKey = Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === searchDish);
-            const dishStatsForSelected = matchingKey ? restaurant.dishStats?.[matchingKey] : null;
+            const dishStatsForSelected = restaurant.dishStats?.[selectedDish] || null;
             
             return (
               <RestaurantCard 
@@ -119,8 +97,8 @@ export default function RestaurantList({
                 name={restaurant.name}
                 area={restaurant.address}
                 workingHours={restaurant.working_hours}
-                selectedDish={activeDishId}
-                dishStatsForSelected={dishStatsForSelected || null}
+                selectedDish={selectedDish}
+                dishStatsForSelected={dishStatsForSelected}
                 allDishStats={Object.values(restaurant.dishStats || {})}
                 category={selectedCategory}
                 description={restaurant.description}

@@ -103,78 +103,53 @@ function AppContent() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<ListingType>('food');
   const [selectedDish, setSelectedDish] = useState<string>('All');
-  const [customDish, setCustomDish] = useState<string>('');
-  const [debouncedCustomDish, setDebouncedCustomDish] = useState<string>('');
   const [selectedPriceRange, setSelectedPriceRange] = useState<string>('all');
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedCustomDish(customDish);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [customDish]);
   const [customPrice, setCustomPrice] = useState<number>(0);
   const [sortOption, setSortOption] = useState<SortOption>('price_asc');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [isAddRestaurantOpen, setIsAddRestaurantOpen] = useState(false);
 
-  const fetchData = async (silent = false) => {
-    if (!silent) setLoading(true);
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const dishToFilter = selectedDish === 'custom' ? debouncedCustomDish : selectedDish;
       const listingsData = await getListingsWithStats({
         type: selectedCategory,
-        selectedDish: dishToFilter,
+        selectedDish: selectedDish,
         sort: sortOption
       });
       
-      if (listingsData.length === 0 && dishToFilter === 'All') {
+      if (listingsData.length === 0 && selectedDish === 'All') {
         await seedDatabase();
         // Re-fetch after seeding
         const seededData = await getListingsWithStats({
           type: selectedCategory,
-          selectedDish: dishToFilter,
+          selectedDish: selectedDish,
           sort: sortOption
         });
-        setListings(seededData || []);
+        setListings(seededData);
       } else {
-        setListings(listingsData || []);
+        setListings(listingsData);
       }
 
       const bannersData = await getActiveBanners();
-      setBanners(bannersData || []);
+      setBanners(bannersData);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      if (!silent) setLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Silent update for dish/custom dish/sort changes to avoid blocking UI with loader
-    const isCategoryChange = false; // We can't easily track this here without a ref, but we can guess
-    fetchData(debouncedCustomDish !== '' || selectedDish !== 'All');
-  }, [selectedCategory, selectedDish, debouncedCustomDish, sortOption]);
+    fetchData();
+  }, [selectedCategory, selectedDish, sortOption]);
 
   const filteredListings = useMemo(() => {
-    return (listings || []).filter(listing => {
-      if (!listing) return false;
+    return listings.filter(listing => {
       // If "All" is selected, we use the listing's overall avg_price
       // Otherwise we use the stats for the specific dish
-      const dishToFilter = selectedDish === 'custom' ? debouncedCustomDish : selectedDish;
-      
-      const stats = (() => {
-        if (dishToFilter === 'All' || !dishToFilter) return null;
-        if (!listing.dishStats) return null;
-        // Exact match
-        if (listing.dishStats[dishToFilter]) return listing.dishStats[dishToFilter];
-        // Case-insensitive match
-        const searchDish = dishToFilter.toLowerCase();
-        const key = Object.keys(listing.dishStats).find(k => k.toLowerCase() === searchDish);
-        return key ? listing.dishStats[key] : null;
-      })();
-
-      const priceToFilter = (dishToFilter === 'All' || !dishToFilter) ? listing.avg_price : stats?.avgPrice;
+      const stats = selectedDish === 'All' ? null : listing.dishStats?.[selectedDish];
+      const priceToFilter = selectedDish === 'All' ? listing.avg_price : stats?.avgPrice;
       
       // Price filter
       let matchesPrice = true;
@@ -190,15 +165,14 @@ function AppContent() {
 
       return matchesPrice;
     });
-  }, [listings, selectedDish, debouncedCustomDish, selectedPriceRange, customPrice, selectedCategory]);
+  }, [listings, selectedDish, selectedPriceRange, customPrice, selectedCategory]);
 
   const filteredBanners = useMemo(() => {
-    return (banners || []).filter(banner => banner && banner.category === selectedCategory);
-  }, [banners, selectedCategory]);
-
-  useEffect(() => {
-    setActiveBannerIndex(0);
-  }, [filteredBanners.length]);
+    // In the new schema, banners might not have a category directly, 
+    // but we can filter by the linked listing's category if needed.
+    // For now, we'll assume banners are relevant to the selected category or generic.
+    return banners;
+  }, [banners]);
 
   useEffect(() => {
     if (filteredBanners.length <= 1 || isBannerPaused) return;
@@ -332,7 +306,6 @@ function AppContent() {
                 setSelectedCategory={(cat) => {
                   setSelectedCategory(cat as ListingType);
                   setSelectedDish('All');
-                  setCustomDish('');
                   setSelectedPriceRange('all');
                 }}
                 selectedDishes={[selectedDish]}
@@ -341,8 +314,8 @@ function AppContent() {
                 setSelectedPriceRange={setSelectedPriceRange}
                 customPrice={customPrice}
                 setCustomPrice={setCustomPrice}
-                customDish={customDish}
-                setCustomDish={setCustomDish}
+                customDish={''}
+                setCustomDish={() => {}}
               />
 
               {/* View Mode Toggle */}
@@ -395,7 +368,6 @@ function AppContent() {
                     restaurants={filteredListings}
                     onAddRestaurant={() => setIsAddRestaurantOpen(true)}
                     selectedDishes={[selectedDish]}
-                    customDish={debouncedCustomDish}
                     selectedCategory={selectedCategory}
                   />
                 </div>
@@ -407,9 +379,8 @@ function AppContent() {
                   onAddReview={(r) => navigate(`/restaurants/${r.id}/review`)}
                   onAddRestaurantClick={() => setIsAddRestaurantOpen(true)}
                   selectedDishes={[selectedDish]}
-                  customDish={debouncedCustomDish}
                   selectedCategory={selectedCategory}
-                  isFilterActive={selectedDish !== 'All' || (String(selectedDish) === 'custom' && !!debouncedCustomDish) || selectedPriceRange !== 'all'}
+                  isFilterActive={selectedDish !== 'All' || selectedPriceRange !== 'all'}
                 />
               )}
             </main>
