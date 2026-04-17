@@ -18,7 +18,7 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { user, setIsLoginOpen } = useAuth();
+  const { user } = useAuth();
 
   if (!user) {
     return (
@@ -30,7 +30,7 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
           <h2 className="text-2xl font-black text-gray-900">{t('loginRequired')}</h2>
           <p className="text-gray-600">{t('loginToAddReview')}</p>
           <button
-            onClick={() => setIsLoginOpen(true)}
+            onClick={() => navigate('/login')}
             className="w-full py-4 bg-[#1D9E75] text-white rounded-2xl font-black text-lg shadow-lg shadow-[#1D9E75]/20 hover:scale-[1.02] transition-transform"
           >
             {t('login')}

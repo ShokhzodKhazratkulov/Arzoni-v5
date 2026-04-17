@@ -11,8 +11,6 @@ interface AuthContextType {
   signInWithEmail: (email: string) => Promise<void>;
   signInAsAdmin: (username: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
-  isLoginOpen: boolean;
-  setIsLoginOpen: (open: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,7 +28,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [mockAdminActive, setMockAdminActive] = useState(false);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   useEffect(() => {
     // Check locally stored mock admin
@@ -128,9 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signInWithEmail,
     signInAsAdmin,
     signOut,
-    isLoginOpen,
-    setIsLoginOpen,
-  }), [user, session, loading, isAdmin, isLoginOpen]);
+  }), [user, session, loading, isAdmin]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

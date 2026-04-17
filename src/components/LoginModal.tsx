@@ -99,8 +99,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 ) : (
                   <div className="space-y-8">
                     <div className="text-center md:text-left">
-                      <h3 className="text-4xl font-black text-[#0f172a] mb-2">{t('welcomeBack')}</h3>
-                      <p className="text-gray-500 font-medium">{t('enterDetailsToContinue')}</p>
+                      <h3 className="text-4xl font-black text-[#0f172a] mb-2">Welcome Back</h3>
+                      <p className="text-gray-500 font-medium">Enter your details to continue learning.</p>
                     </div>
 
                     <div className="space-y-6">
@@ -109,14 +109,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         className="w-full h-14 bg-white border border-gray-200 text-gray-900 rounded-2xl font-bold hover:bg-gray-50 transition-all flex items-center justify-center gap-3 shadow-sm"
                       >
                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                        <span className="text-sm">{t('continueWithGoogle')}</span>
+                        <span className="text-sm">Continue with Google</span>
                       </button>
 
                       <div className="relative flex items-center justify-center">
                         <div className="absolute inset-0 flex items-center">
                           <div className="w-full border-t border-gray-100"></div>
                         </div>
-                        <span className="relative px-3 bg-white text-[10px] font-black text-gray-300 uppercase tracking-widest">{t('orEmail')}</span>
+                        <span className="relative px-3 bg-white text-[10px] font-black text-gray-300 uppercase tracking-widest">or email</span>
                       </div>
 
                       <form onSubmit={handleSubmit} className="space-y-6">
@@ -136,7 +136,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('password') || 'Password'}</label>
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Password</label>
                           <div className="relative">
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                             <input
@@ -165,14 +165,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                           {loading ? (
                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                           ) : (
-                            <span>{showPasswordField ? 'Sign in as Admin' : t('signIn')}</span>
+                            <span>Sign In</span>
                           )}
                         </button>
                       </form>
 
                       <div className="text-center pt-2">
                         <p className="text-xs font-bold text-gray-400">
-                          {t('dontHaveAccount')} <button className="text-[#ec8d32] hover:underline whitespace-nowrap">{t('joinArzoni')}</button>
+                          Don't have an account? <button className="text-[#ec8d32] hover:underline">Join Arzoni</button>
                         </p>
                       </div>
                     </div>

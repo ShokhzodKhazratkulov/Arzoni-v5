@@ -9,7 +9,6 @@ import { getListingById, updateListing } from '../services/listings';
 import { getReviewsByListingId, likeReview, dislikeReview, createReview } from '../services/reviews';
 import { getMapUrl, uploadImage } from '../lib/utils';
 import AddRestaurantModal from './AddRestaurantModal';
-import TranslatedText from './TranslatedText';
 
 export default function RestaurantDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -104,27 +103,12 @@ export default function RestaurantDetailPage() {
       if (reviews.length === 0) return;
       
       setIsTranslating(true);
-      const comments = reviews.map(r => r.text || '').filter(Boolean);
-      const titles = reviews.map(r => r.title || '').filter(Boolean);
-      const combined = [...comments, ...titles];
-
-      if (combined.length === 0) {
-        setIsTranslating(false);
-        return;
-      }
-
+      const comments = reviews.map(r => r.text || '');
       try {
-        const translated = await translateBatch(combined, i18n.language);
+        const translated = await translateBatch(comments, i18n.language);
         const newTranslations: Record<string, string> = {};
-        
-        let idx = 0;
-        reviews.forEach((r) => {
-          if (r.text) {
-            newTranslations[`text_${r.id}`] = translated[idx++];
-          }
-          if (r.title) {
-            newTranslations[`title_${r.id}`] = translated[idx++];
-          }
+        reviews.forEach((r, i) => {
+          if (r.id) newTranslations[r.id] = translated[i];
         });
         setTranslatedReviews(newTranslations);
       } catch (error) {
@@ -267,11 +251,9 @@ export default function RestaurantDetailPage() {
           </div>
           
           {restaurant.description && (
-            <TranslatedText 
-              text={restaurant.description} 
-              className="text-sm text-gray-600 leading-relaxed block"
-              as="p"
-            />
+            <p className="text-sm text-gray-600 leading-relaxed">
+              {restaurant.description}
+            </p>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -502,14 +484,8 @@ export default function RestaurantDetailPage() {
                   )}
                 </div>
 
-                {review.title && (
-                  <p className="text-xs font-black text-gray-900 mb-1 uppercase tracking-wide">
-                    {translatedReviews[`title_${review.id}`] || review.title}
-                  </p>
-                )}
-
                 <p className="text-sm text-gray-600 leading-relaxed italic">
-                  "{translatedReviews[`text_${review.id}`] || review.text}"
+                  "{translatedReviews[review.id!] || review.text}"
                 </p>
 
                 {review.photo_urls && review.photo_urls.length > 0 && (

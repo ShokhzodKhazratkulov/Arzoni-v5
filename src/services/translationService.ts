@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
+const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '' });
 
 // Simple in-memory cache to store translations
 const translationCache: Record<string, string> = {};
@@ -8,24 +8,11 @@ const translationCache: Record<string, string> = {};
 export async function translateBatch(texts: string[], targetLang: string): Promise<string[]> {
   if (!texts.length || !targetLang) return texts;
   
-  // Mapping code to full names for Gemini
-  const langMap: Record<string, string> = {
-    'uz': 'Uzbek',
-    'ru': 'Russian',
-    'en': 'English'
-  };
-
-  const targetLangName = langMap[targetLang] || targetLang;
-  
   const results: string[] = new Array(texts.length).fill('');
   const toTranslate: { text: string; index: number }[] = [];
 
   // Check cache first
   texts.forEach((text, index) => {
-    if (!text) {
-      results[index] = '';
-      return;
-    }
     const cacheKey = `${targetLang}:${text}`;
     if (translationCache[cacheKey]) {
       results[index] = translationCache[cacheKey];
@@ -38,8 +25,8 @@ export async function translateBatch(texts: string[], targetLang: string): Promi
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Translate the following list of strings into ${targetLangName}. 
+      model: "gemini-2.0-flash",
+      contents: `Translate the following list of strings into ${targetLang}. 
       Return a JSON array of strings in the exact same order.
       Keep the word "Arzoni" as is, do not translate it.
       

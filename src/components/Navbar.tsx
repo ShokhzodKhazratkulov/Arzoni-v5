@@ -11,7 +11,8 @@ interface NavbarProps {
 
 export default function Navbar({ onAdminClick }: NavbarProps) {
   const { t, i18n } = useTranslation();
-  const { user, isAdmin, signOut, isLoginOpen, setIsLoginOpen } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
