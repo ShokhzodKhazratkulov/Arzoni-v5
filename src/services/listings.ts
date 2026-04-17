@@ -3,37 +3,67 @@ import { Listing, DishStats, ListingType } from '../types';
 import { resolveDishConcept } from './dishService';
 
 export const seedSmartConcepts = async () => {
-  // 1. Create Fish Concept
-  const { data: fishConcept } = await supabase
-    .from('dish_concepts')
-    .insert([{ canonical_name: 'fish', category: 'food', emoji: '🐟' }])
-    .select()
-    .single();
+  const dishes = [
+    { canonical: 'osh', emoji: '🍛', aliases: [{ name: 'Osh (Palov)', lang: 'uz' }, { name: 'Плов', lang: 'ru' }, { name: 'Pilaf', lang: 'en' }] },
+    { canonical: 'qozon-kabob', emoji: '🥘', aliases: [{ name: 'Qozon Kabob', lang: 'uz' }, { name: 'Казан-кебаб', lang: 'ru' }, { name: 'Kazan Kebab', lang: 'en' }] },
+    { canonical: 'dimlama', emoji: '🍲', aliases: [{ name: 'Dimlama', lang: 'uz' }, { name: 'Димляма', lang: 'ru' }, { name: 'Dimlama', lang: 'en' }] },
+    { canonical: 'shashlik', emoji: '🍢', aliases: [{ name: 'Shashlik', lang: 'uz' }, { name: 'Шашлык', lang: 'ru' }, { name: 'Shashlik', lang: 'en' }] },
+    { canonical: 'norin', emoji: '🍝', aliases: [{ name: 'Norin', lang: 'uz' }, { name: 'Нарын', lang: 'ru' }, { name: 'Naryn', lang: 'en' }] },
+    { canonical: 'hasib', emoji: '🌭', aliases: [{ name: 'Hasib', lang: 'uz' }, { name: 'Хасиб', lang: 'ru' }, { name: 'Hasib', lang: 'en' }] },
+    { canonical: 'jiz-biz', emoji: '🥩', aliases: [{ name: 'Jiz-biz', lang: 'uz' }, { name: 'Жиз-биз', lang: 'ru' }, { name: 'Jiz-biz', lang: 'en' }] },
+    { canonical: 'qovurma-lagmon', emoji: '🍜', aliases: [{ name: 'Qovurma Lag\'mon', lang: 'uz' }, { name: 'Ковурма лагман', lang: 'ru' }, { name: 'Fried Lagman', lang: 'en' }] },
+    { canonical: 'shorva', emoji: '🥣', aliases: [{ name: 'Sho\'rva', lang: 'uz' }, { name: 'Шурпа', lang: 'ru' }, { name: 'Shurpa', lang: 'en' }] },
+    { canonical: 'mastava', emoji: '🍚', aliases: [{ name: 'Mastava', lang: 'uz' }, { name: 'Мастава', lang: 'ru' }, { name: 'Mastava', lang: 'en' }] },
+    { canonical: 'lagmon', emoji: '🍜', aliases: [{ name: 'Lag\'mon', lang: 'uz' }, { name: 'Лагман', lang: 'ru' }, { name: 'Lagman', lang: 'en' }] },
+    { canonical: 'moshxorda', emoji: '🍲', aliases: [{ name: 'Moshxo\'rda', lang: 'uz' }, { name: 'Мошхурда', lang: 'ru' }, { name: 'Moshkhurda', lang: 'en' }] },
+    { canonical: 'chuchvara', emoji: '🥟', aliases: [{ name: 'Chuchvara', lang: 'uz' }, { name: 'Чучвара', lang: 'ru' }, { name: 'Chuchvara', lang: 'en' }] },
+    { canonical: 'ugra-osh', emoji: '🍜', aliases: [{ name: 'Ugra-Osh', lang: 'uz' }, { name: 'Угра-ош', lang: 'ru' }, { name: 'Ugra-Osh', lang: 'en' }] },
+    { canonical: 'somsa', emoji: '🥐', aliases: [{ name: 'Somsa', lang: 'uz' }, { name: 'Самса', lang: 'ru' }, { name: 'Somsa', lang: 'en' }] },
+    { canonical: 'manti', emoji: '🥟', aliases: [{ name: 'Manti', lang: 'uz' }, { name: 'Манты', lang: 'ru' }, { name: 'Manti', lang: 'en' }] },
+    { canonical: 'xonim', emoji: '🌯', aliases: [{ name: 'Xonim', lang: 'uz' }, { name: 'Ханум', lang: 'ru' }, { name: 'Khanum', lang: 'en' }] },
+    { canonical: 'tuxum-barak', emoji: '🥚', aliases: [{ name: 'Tuxum Barak', lang: 'uz' }, { name: 'Тухум барак', lang: 'ru' }, { name: 'Tuxum Barak', lang: 'en' }] },
+    { canonical: 'shivit-oshi', emoji: '🍝', aliases: [{ name: 'Shivit Oshi', lang: 'uz' }, { name: 'Шивит оши', lang: 'ru' }, { name: 'Shivit Oshi', lang: 'en' }] },
+    { canonical: 'gummaa', emoji: '🥟', aliases: [{ name: 'Gummaa', lang: 'uz' }, { name: 'Гумма', lang: 'ru' }, { name: 'Gummaa', lang: 'en' }] },
+    { canonical: 'non', emoji: '🍞', aliases: [{ name: 'Yopgan Non', lang: 'uz' }, { name: 'Лепешка', lang: 'ru' }, { name: 'Flatbread', lang: 'en' }] },
+    { canonical: 'achichuq', emoji: '🥗', aliases: [{ name: 'Achichuq', lang: 'uz' }, { name: 'Ачичук', lang: 'ru' }, { name: 'Achichuq', lang: 'en' }] },
+    { canonical: 'chakka', emoji: '🥛', aliases: [{ name: 'Chakka', lang: 'uz' }, { name: 'Чакка', lang: 'ru' }, { name: 'Chakka', lang: 'en' }] },
+    { canonical: 'suzma', emoji: '🥣', aliases: [{ name: 'Suzma', lang: 'uz' }, { name: 'Сузма', lang: 'ru' }, { name: 'Suzma', lang: 'en' }] },
+    { canonical: 'kuygan-opka', emoji: '🥘', aliases: [{ name: 'Kuygan O\'pka', lang: 'uz' }, { name: 'Куйган опка', lang: 'ru' }, { name: 'Kuygan Opka', lang: 'en' }] },
+    { canonical: 'halva', emoji: '🍯', aliases: [{ name: 'Halva', lang: 'uz' }, { name: 'Халва', lang: 'ru' }, { name: 'Halva', lang: 'en' }] },
+    { canonical: 'sumalak', emoji: '🥣', aliases: [{ name: 'Sumalak', lang: 'uz' }, { name: 'Сумаляк', lang: 'ru' }, { name: 'Sumalak', lang: 'en' }] },
+    { canonical: 'nisholda', emoji: '🥛', aliases: [{ name: 'Nisholda', lang: 'uz' }, { name: 'Нишолда', lang: 'ru' }, { name: 'Nisholda', lang: 'en' }] },
+    { canonical: 'pashmak', emoji: '🍬', aliases: [{ name: 'Pashmak', lang: 'uz' }, { name: 'Пашмак', lang: 'ru' }, { name: 'Pashmak', lang: 'en' }] },
+    { canonical: 'holvaytar', emoji: '🍮', aliases: [{ name: 'Holvaytar', lang: 'uz' }, { name: 'Холвайтар', lang: 'ru' }, { name: 'Holvaytar', lang: 'en' }] },
+    { canonical: 'parvarda', emoji: '🍬', aliases: [{ name: 'Parvarda', lang: 'uz' }, { name: 'Парварда', lang: 'ru' }, { name: 'Parvarda', lang: 'en' }] }
+  ];
 
-  if (fishConcept) {
-    await supabase.from('dish_aliases').insert([
-      { concept_id: fishConcept.id, name: 'Baliq', language_code: 'uz' },
-      { concept_id: fishConcept.id, name: 'Fish', language_code: 'en' },
-      { concept_id: fishConcept.id, name: 'Рыба', language_code: 'ru' },
-    ]);
+  for (const item of dishes) {
+    // Check if concept already exists
+    const { data: existing } = await supabase
+      .from('dish_concepts')
+      .select('id')
+      .eq('canonical_name', item.canonical)
+      .single();
+
+    if (!existing) {
+      const { data: concept } = await supabase
+        .from('dish_concepts')
+        .insert([{ canonical_name: item.canonical, category: 'food', emoji: item.emoji }])
+        .select()
+        .single();
+
+      if (concept) {
+        const aliasInserts = item.aliases.map(a => ({
+          concept_id: concept.id,
+          name: a.name,
+          language_code: a.lang
+        }));
+        await supabase.from('dish_aliases').insert(aliasInserts);
+      }
+    }
   }
 
-  // 2. Create Bread Concept
-  const { data: breadConcept } = await supabase
-    .from('dish_concepts')
-    .insert([{ canonical_name: 'bread', category: 'food', emoji: '🍞' }])
-    .select()
-    .single();
-
-  if (breadConcept) {
-    await supabase.from('dish_aliases').insert([
-      { concept_id: breadConcept.id, name: 'Non', language_code: 'uz' },
-      { concept_id: breadConcept.id, name: 'Bread', language_code: 'en' },
-      { concept_id: breadConcept.id, name: 'Хлеб', language_code: 'ru' },
-    ]);
-  }
-
-  console.log('Smart concepts seeded!');
+  console.log('Smart concepts seeded with comprehensive dish list!');
 };
 
 export const getListingsWithStats = async (filters: { 
