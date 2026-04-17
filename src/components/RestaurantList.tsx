@@ -33,15 +33,24 @@ export default function RestaurantList({
   const navigate = useNavigate();
   
   const activeDishId = useMemo(() => {
-    if (selectedDishes[0] === 'custom' && customDish) {
+    const firstDish = selectedDishes && selectedDishes[0];
+    if (firstDish === 'custom' && customDish) {
       return customDish;
     }
-    return selectedDishes[0] || (selectedCategory === 'food' ? 'Osh' : 'T-shirt');
+    return firstDish || (selectedCategory === 'food' ? 'Osh' : 'T-shirt');
   }, [selectedDishes, customDish, selectedCategory]);
 
-  const getSortClarification = () => {
+  const getDishLabel = (dishId: string) => {
+    if (!dishId) return '';
+    if (dishId === 'All') return selectedCategory === 'food' ? t('allDishes') : t('allClothes');
     const isCustom = selectedDishes[0] === 'custom';
-    const dishName = isCustom ? activeDishId : t(`dishes.${activeDishId.toLowerCase()}`, t(`clothes.${activeDishId.toLowerCase()}`, activeDishId));
+    if (isCustom) return dishId;
+    const lowerId = String(dishId).toLowerCase();
+    return t(`dishes.${lowerId}`, t(`clothes.${lowerId}`, String(dishId)));
+  };
+
+  const getSortClarification = () => {
+    const dishName = getDishLabel(activeDishId);
     
     if (selectedDishes.length > 0 && selectedDishes[0] !== 'All') {
       return t(`sort_${sortOption}`, { dish: dishName });
@@ -99,7 +108,7 @@ export default function RestaurantList({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {restaurants.map(restaurant => {
             // Logic to find matching key case-insensitively for custom dish
-            const searchDish = activeDishId.toLowerCase();
+            const searchDish = String(activeDishId).toLowerCase();
             const matchingKey = Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === searchDish);
             const dishStatsForSelected = matchingKey ? restaurant.dishStats?.[matchingKey] : null;
             

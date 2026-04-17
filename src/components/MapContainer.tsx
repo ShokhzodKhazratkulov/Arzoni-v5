@@ -116,16 +116,24 @@ const MapContent = ({ restaurants, onAddRestaurant, selectedDishes = [], customD
 
   // Calculate info for selected restaurant
   const activeDishId = useMemo(() => {
-    if (!selectedRestaurant || selectedDishes.length === 0) return null;
+    if (!selectedRestaurant || !selectedDishes || selectedDishes.length === 0) return null;
     
     if (selectedDishes.includes('custom') && customDish) {
-      const normalizedSearch = customDish.toLowerCase();
+      const normalizedSearch = String(customDish).toLowerCase();
       const matchingKey = Object.keys(selectedRestaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedSearch);
       return matchingKey || customDish;
     }
     
-    return selectedDishes.find(id => selectedRestaurant.dishStats?.[id]?.reviewCount) || selectedDishes[0];
-  }, [selectedRestaurant, selectedDishes, customDish]);
+    const firstDish = selectedDishes[0];
+    const foundId = selectedDishes.find(id => {
+      if (!id) return false;
+      const normalizedId = String(id).toLowerCase();
+      const matchingKey = Object.keys(selectedRestaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedId);
+      return matchingKey && selectedRestaurant.dishStats[matchingKey]?.reviewCount;
+    });
+
+    return foundId || firstDish || (selectedCategory === 'food' ? 'Osh' : 'T-shirt');
+  }, [selectedRestaurant, selectedDishes, customDish, selectedCategory]);
 
   const displayPrice = selectedRestaurant 
     ? (activeDishId && selectedRestaurant.dishStats?.[activeDishId] 
@@ -183,19 +191,18 @@ const MapContent = ({ restaurants, onAddRestaurant, selectedDishes = [], customD
       >
         {restaurants.map((restaurant) => {
           // Find the most relevant dish to display info for (same logic as RestaurantCard)
-          const activeDishId = (() => {
-            if (selectedDishes.length === 0) return null;
+          const activeDishIdForPin = (() => {
+            if (!selectedDishes || selectedDishes.length === 0) return null;
             
             if (selectedDishes.includes('custom') && customDish) {
-              const normalizedSearch = customDish.toLowerCase();
+              const normalizedSearch = String(customDish).toLowerCase();
               const matchingKey = Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedSearch);
               return matchingKey || customDish;
             }
             
-            // Find the first selected dish that has a comment, or just the first selected dish
-            // We also need to handle case-insensitivity here for consistency
             const foundId = selectedDishes.find(id => {
-              const normalizedId = id.toLowerCase();
+              if (!id) return false;
+              const normalizedId = String(id).toLowerCase();
               const matchingKey = Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedId);
               return matchingKey && restaurant.dishStats[matchingKey]?.reviewCount;
             });
@@ -206,19 +213,28 @@ const MapContent = ({ restaurants, onAddRestaurant, selectedDishes = [], customD
             }
 
             const firstId = selectedDishes[0];
-            const normalizedFirstId = firstId.toLowerCase();
+            const normalizedFirstId = String(firstId).toLowerCase();
             return Object.keys(restaurant.dishStats || {}).find(k => k.toLowerCase() === normalizedFirstId) || firstId;
           })();
 
-          const displayPrice = activeDishId && restaurant.dishStats?.[activeDishId] 
-            ? restaurant.dishStats[activeDishId].avgPrice 
+          const displayPriceForPin = activeDishIdForPin && restaurant.dishStats?.[activeDishIdForPin] 
+            ? restaurant.dishStats[activeDishIdForPin].avgPrice 
             : (restaurant.avg_price || 0);
 
-          const dishStats = activeDishId && restaurant.dishStats?.[activeDishId];
+          const dishStats = activeDishIdForPin && restaurant.dishStats?.[activeDishIdForPin];
           const rating = dishStats ? dishStats.avgRating : (restaurant.totalAvgRating || 0);
           const reviewCount = dishStats ? dishStats.reviewCount : (restaurant.totalReviewCount || 0);
-          const shortPrice = displayPrice >= 1000 ? `${Math.round(displayPrice / 1000)}k` : displayPrice;
-          const dishLabel = activeDishId ? t(`dishes.${activeDishId.toLowerCase()}`, t(`clothes.${activeDishId.toLowerCase()}`, activeDishId)) : '';
+          const shortPrice = displayPriceForPin >= 1000 ? `${Math.round(displayPriceForPin / 1000)}k` : displayPriceForPin;
+          
+          const getDishLabel = (dishId: string | null) => {
+            if (!dishId) return '';
+            if (dishId === 'All') return selectedCategory === 'food' ? t('allDishes') : t('allClothes');
+            if (selectedDishes.includes('custom')) return dishId;
+            const lowerId = String(dishId).toLowerCase();
+            return t(`dishes.${lowerId}`, t(`clothes.${lowerId}`, String(dishId)));
+          };
+
+          const dishLabel = getDishLabel(activeDishIdForPin);
 
           return (
             <AdvancedMarker
@@ -228,7 +244,7 @@ const MapContent = ({ restaurants, onAddRestaurant, selectedDishes = [], customD
             >
               <div className="relative group">
                 <Pin 
-                  background={getPinColor(displayPrice)} 
+                  background={getPinColor(displayPriceForPin)} 
                   borderColor={'#ffffff'} 
                   glyphColor={'#ffffff'}
                   scale={1.2}

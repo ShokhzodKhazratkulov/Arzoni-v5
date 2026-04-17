@@ -113,10 +113,11 @@ export default function FilterBar({
           <div className="flex items-center gap-2">
             <input
               type="text"
+              autoFocus
               value={customDish}
               onChange={(e) => setCustomDish(e.target.value)}
-              placeholder={t('customDishPlaceholder')}
-              className="w-full sm:w-64 px-4 py-2 text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+              placeholder={selectedCategory === 'food' ? t('customDishPlaceholder') : t('customItemPlaceholder')}
+              className="w-full sm:w-64 px-4 py-2 text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D9E75] font-medium"
             />
           </div>
         </div>

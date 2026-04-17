@@ -118,8 +118,8 @@ function AppContent() {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [isAddRestaurantOpen, setIsAddRestaurantOpen] = useState(false);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const dishToFilter = selectedDish === 'custom' ? debouncedCustomDish : selectedDish;
       const listingsData = await getListingsWithStats({
@@ -136,30 +136,44 @@ function AppContent() {
           selectedDish: dishToFilter,
           sort: sortOption
         });
-        setListings(seededData);
+        setListings(seededData || []);
       } else {
-        setListings(listingsData);
+        setListings(listingsData || []);
       }
 
       const bannersData = await getActiveBanners();
-      setBanners(bannersData);
+      setBanners(bannersData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    // Silent update for dish/custom dish/sort changes to avoid blocking UI with loader
+    const isCategoryChange = false; // We can't easily track this here without a ref, but we can guess
+    fetchData(debouncedCustomDish !== '' || selectedDish !== 'All');
   }, [selectedCategory, selectedDish, debouncedCustomDish, sortOption]);
 
   const filteredListings = useMemo(() => {
-    return listings.filter(listing => {
+    return (listings || []).filter(listing => {
+      if (!listing) return false;
       // If "All" is selected, we use the listing's overall avg_price
       // Otherwise we use the stats for the specific dish
       const dishToFilter = selectedDish === 'custom' ? debouncedCustomDish : selectedDish;
-      const stats = dishToFilter === 'All' || !dishToFilter ? null : listing.dishStats?.[dishToFilter];
+      
+      const stats = (() => {
+        if (dishToFilter === 'All' || !dishToFilter) return null;
+        if (!listing.dishStats) return null;
+        // Exact match
+        if (listing.dishStats[dishToFilter]) return listing.dishStats[dishToFilter];
+        // Case-insensitive match
+        const searchDish = dishToFilter.toLowerCase();
+        const key = Object.keys(listing.dishStats).find(k => k.toLowerCase() === searchDish);
+        return key ? listing.dishStats[key] : null;
+      })();
+
       const priceToFilter = (dishToFilter === 'All' || !dishToFilter) ? listing.avg_price : stats?.avgPrice;
       
       // Price filter
@@ -176,10 +190,10 @@ function AppContent() {
 
       return matchesPrice;
     });
-  }, [listings, selectedDish, selectedPriceRange, customPrice, selectedCategory]);
+  }, [listings, selectedDish, debouncedCustomDish, selectedPriceRange, customPrice, selectedCategory]);
 
   const filteredBanners = useMemo(() => {
-    return banners.filter(banner => banner.category === selectedCategory);
+    return (banners || []).filter(banner => banner && banner.category === selectedCategory);
   }, [banners, selectedCategory]);
 
   useEffect(() => {
