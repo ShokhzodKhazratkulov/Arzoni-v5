@@ -1,11 +1,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { supabase } from "../supabase";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const GEMINI_KEY = (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
+const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
 
 export async function resolveDishConcept(dishName: string, category: 'food' | 'clothes' = 'food'): Promise<string | null> {
   const normalizedInput = dishName.trim().toLowerCase();
-  if (!normalizedInput) return null;
+  if (!normalizedInput || !GEMINI_KEY) return null;
 
   // 1. Try exact match in aliases first
   const { data: exactMatch } = await supabase
@@ -30,10 +31,16 @@ export async function resolveDishConcept(dishName: string, category: 'food' | 'c
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Associate this ${category} item: "${dishName}". 
-      Existing concepts: [${conceptContext}]. 
-      If it matches an existing concept (even in another language like RU/EN/UZ), return that ID. 
-      If it's new, return "new" and suggest translations.
+      contents: `You are a food ontology expert for Uzbekistan. 
+      Task: Map this user input: "${dishName}" (Language potentially UZ/RU/EN).
+      
+      Context: This is for a "Smart Search" in a food app. 
+      Example: If input is "Karam sho'rva", it MUST match "cabbage-soup" if that exists.
+      Existing concept IDs and their names: [${conceptContext}]. 
+      
+      1. If the input name refers to an existing concept in ANY language, return its ID.
+      2. If it is a new dish, return "new" and provide high-quality translations for [uz, ru, en].
+      
       Return JSON ONLY.`,
       config: {
         responseMimeType: "application/json",

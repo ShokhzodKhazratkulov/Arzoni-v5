@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { Listing, DishStats, ListingType } from '../types';
+import { resolveDishConcept } from './dishService';
 
 export const seedSmartConcepts = async () => {
   // 1. Create Fish Concept
@@ -56,6 +57,14 @@ export const getListingsWithStats = async (filters: {
     
     if (aliasMatches && aliasMatches.length > 0) {
       resolvedConceptIds = Array.from(new Set(aliasMatches.map(m => m.concept_id)));
+    } else {
+      // AI FALLBACK: If DB doesn't have the translation yet, ask Gemini
+      console.log('DB Search for', search, 'returned no results. Trying AI resolution...');
+      const conceptId = await resolveDishConcept(filters.customDish, filters.type || 'food');
+      if (conceptId) {
+        resolvedConceptIds = [conceptId];
+        console.log('AI resolved', search, 'to Concept ID:', conceptId);
+      }
     }
   }
 
