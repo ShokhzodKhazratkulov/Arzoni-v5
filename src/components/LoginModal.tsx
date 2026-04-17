@@ -97,86 +97,86 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-8">
-                    <div className="text-center md:text-left">
-                      <h3 className="text-4xl font-black text-[#0f172a] mb-2">Welcome Back</h3>
-                      <p className="text-gray-500 font-medium">Enter your details to continue learning.</p>
-                    </div>
-
-                    <div className="space-y-6">
-                      <button
-                        onClick={() => signInWithGoogle()}
-                        className="w-full h-14 bg-white border border-gray-200 text-gray-900 rounded-2xl font-bold hover:bg-gray-50 transition-all flex items-center justify-center gap-3 shadow-sm"
-                      >
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                        <span className="text-sm">Continue with Google</span>
-                      </button>
-
-                      <div className="relative flex items-center justify-center">
-                        <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-gray-100"></div>
-                        </div>
-                        <span className="relative px-3 bg-white text-[10px] font-black text-gray-300 uppercase tracking-widest">or email</span>
+                    <div className="space-y-8">
+                      <div className="text-center md:text-left">
+                        <h3 className="text-4xl font-black text-[#0f172a] mb-2">{t('welcomeBack')}</h3>
+                        <p className="text-gray-500 font-medium">{t('loginSubtitle')}</p>
                       </div>
 
-                      <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('emailAddress')}</label>
-                          <div className="relative">
-                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                            <input
-                              type="text"
-                              required
-                              value={identity}
-                              onChange={(e) => setIdentity(e.target.value)}
-                              placeholder="name@example.com"
-                              className="w-full pl-12 pr-4 h-14 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#f39c12]/20 transition-all"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Password</label>
-                          <div className="relative">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                            <input
-                              type="password"
-                              required={showPasswordField}
-                              value={password}
-                              onChange={(e) => setPassword(e.target.value)}
-                              placeholder="••••••••"
-                              className="w-full pl-12 pr-4 h-14 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#f39c12]/20 transition-all"
-                            />
-                          </div>
-                        </div>
-
-                        {error && (
-                          <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100">
-                            <AlertCircle size={14} className="shrink-0" />
-                            <p>{error}</p>
-                          </div>
-                        )}
-
+                      <div className="space-y-6">
                         <button
-                          type="submit"
-                          disabled={loading}
-                          className="w-full bg-[#ec8d32] text-white h-14 rounded-2xl font-black text-base shadow-lg shadow-orange-100 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                          onClick={() => signInWithGoogle()}
+                          className="w-full h-14 bg-white border border-gray-200 text-gray-900 rounded-2xl font-bold hover:bg-gray-50 transition-all flex items-center justify-center gap-3 shadow-sm"
                         >
-                          {loading ? (
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          ) : (
-                            <span>Sign In</span>
-                          )}
+                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                          <span className="text-sm">{t('continueWithGoogle')}</span>
                         </button>
-                      </form>
 
-                      <div className="text-center pt-2">
-                        <p className="text-xs font-bold text-gray-400">
-                          Don't have an account? <button className="text-[#ec8d32] hover:underline">Join Arzoni</button>
-                        </p>
+                        <div className="relative flex items-center justify-center">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-100"></div>
+                          </div>
+                          <span className="relative px-3 bg-white text-[10px] font-black text-gray-300 uppercase tracking-widest">{t('orEmail')}</span>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('emailAddress')}</label>
+                            <div className="relative">
+                              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                              <input
+                                type="text"
+                                required
+                                value={identity}
+                                onChange={(e) => setIdentity(e.target.value)}
+                                placeholder="name@example.com"
+                                className="w-full pl-12 pr-4 h-14 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/20 transition-all"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('password')}</label>
+                            <div className="relative">
+                              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                              <input
+                                type="password"
+                                required={showPasswordField}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                className="w-full pl-12 pr-4 h-14 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/20 transition-all"
+                              />
+                            </div>
+                          </div>
+
+                          {error && (
+                            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100">
+                              <AlertCircle size={14} className="shrink-0" />
+                              <p>{error}</p>
+                            </div>
+                          )}
+
+                          <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-[#1D9E75] text-white h-14 rounded-2xl font-black text-base shadow-lg shadow-[#1D9E75]/10 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            {loading ? (
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              <span>{t('signIn')}</span>
+                            )}
+                          </button>
+                        </form>
+
+                        <div className="text-center pt-2">
+                          <p className="text-xs font-bold text-gray-400">
+                            {t('noAccount')} <button className="text-[#1D9E75] hover:underline" type="button">{t('joinArzoni')}</button>
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
                 )}
               </div>
             </div>

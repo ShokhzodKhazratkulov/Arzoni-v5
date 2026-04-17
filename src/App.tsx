@@ -11,6 +11,7 @@ import RestaurantList from './components/RestaurantList';
 import MapContainer from './components/MapContainer';
 import AddRestaurantModal from './components/AddRestaurantModal';
 import AdminDashboard from './components/AdminDashboard';
+import LoginPage from './components/LoginPage';
 import './i18n';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Map as MapIcon, LayoutList, MapPin } from 'lucide-react';
@@ -388,6 +389,7 @@ function AppContent() {
           <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
           <Route path="/place/:id" element={<RestaurantDetailPage />} />
           <Route path="/restaurants/:id/review" element={<AddReviewPage onReviewAdded={fetchData} />} />
+          <Route path="/login" element={<LoginPage />} />
         </Routes>
 
         <AddRestaurantModal 
