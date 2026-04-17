@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Map as MapIcon, LayoutList, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
-import { getListingsWithStats, createListing, updateListing } from './services/listings';
+import { getListingsWithStats, createListing, updateListing, seedSmartConcepts } from './services/listings';
 import { getActiveBanners } from './services/banners';
 import { createReview } from './services/reviews';
 import { useVisitTracking } from './lib/useVisitTracking';
@@ -123,6 +123,7 @@ function AppContent() {
       
       if (listingsData.length === 0 && selectedDish === 'All') {
         await seedDatabase();
+        await seedSmartConcepts();
         // Re-fetch after seeding
         const seededData = await getListingsWithStats({
           type: selectedCategory,

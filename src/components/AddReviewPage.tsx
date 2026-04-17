@@ -7,6 +7,7 @@ import { supabase } from '../supabase';
 import { useTranslation } from 'react-i18next';
 import { createReview } from '../services/reviews';
 import { getListingById } from '../services/listings';
+import { resolveDishConcept } from '../services/dishService';
 import { uploadImage, cn } from '../lib/utils';
 import { useAuth } from '../lib/AuthContext';
 
@@ -133,10 +134,14 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
         const uploadPromises = photoFiles.map(file => uploadImage(file, `reviews/${id}`));
         uploadedPhotoUrls = await Promise.all(uploadPromises);
       }
+
+      // Smart Mapping: Resolve the dish to a concept ID
+      const dishConceptId = await resolveDishConcept(dishName, listingType);
       
       await createReview({
         listing_id: id,
         dish_name: dishName,
+        dish_concept_id: dishConceptId || undefined,
         price_paid: Number(form.pricePaid),
         price_per_pax: form.pricePerPax ? Number(form.pricePerPax) : undefined,
         service_tax: form.serviceTax ? Number(form.serviceTax) : undefined,

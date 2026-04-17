@@ -1,6 +1,40 @@
 import { supabase } from '../supabase';
 import { Listing, DishStats, ListingType } from '../types';
 
+export const seedSmartConcepts = async () => {
+  // 1. Create Fish Concept
+  const { data: fishConcept } = await supabase
+    .from('dish_concepts')
+    .insert([{ canonical_name: 'fish', category: 'food', emoji: '🐟' }])
+    .select()
+    .single();
+
+  if (fishConcept) {
+    await supabase.from('dish_aliases').insert([
+      { concept_id: fishConcept.id, name: 'Baliq', language_code: 'uz' },
+      { concept_id: fishConcept.id, name: 'Fish', language_code: 'en' },
+      { concept_id: fishConcept.id, name: 'Рыба', language_code: 'ru' },
+    ]);
+  }
+
+  // 2. Create Bread Concept
+  const { data: breadConcept } = await supabase
+    .from('dish_concepts')
+    .insert([{ canonical_name: 'bread', category: 'food', emoji: '🍞' }])
+    .select()
+    .single();
+
+  if (breadConcept) {
+    await supabase.from('dish_aliases').insert([
+      { concept_id: breadConcept.id, name: 'Non', language_code: 'uz' },
+      { concept_id: breadConcept.id, name: 'Bread', language_code: 'en' },
+      { concept_id: breadConcept.id, name: 'Хлеб', language_code: 'ru' },
+    ]);
+  }
+
+  console.log('Smart concepts seeded!');
+};
+
 export const getListingsWithStats = async (filters: { 
   selectedDish?: string; 
   customDish?: string;
@@ -8,6 +42,23 @@ export const getListingsWithStats = async (filters: {
   searchQuery?: string;
   sort?: string;
 }) => {
+  // --- New Multilingual Concept Resolution ---
+  let resolvedConceptIds: string[] = [];
+  
+  // If user is searching 'custom' text, we try to resolve concepts first
+  if (filters.selectedDish === 'custom' && filters.customDish) {
+    const search = filters.customDish.toLowerCase().trim();
+    // Search aliases table for this text in ANY language
+    const { data: aliasMatches } = await supabase
+      .from('dish_aliases')
+      .select('concept_id')
+      .ilike('name', `%${search}%`);
+    
+    if (aliasMatches && aliasMatches.length > 0) {
+      resolvedConceptIds = Array.from(new Set(aliasMatches.map(m => m.concept_id)));
+    }
+  }
+
   let query = supabase
     .from('listings')
     .select(`
@@ -25,7 +76,7 @@ export const getListingsWithStats = async (filters: {
   }
 
   const { data, error } = await query;
-
+  // ... (keeping existing error handling) ...
   if (error) {
     if (error.code === '406' || error.message?.includes('406')) {
       console.warn('Database schema cache is stale. Please run the SQL script to refresh it.');
@@ -40,11 +91,12 @@ export const getListingsWithStats = async (filters: {
     const dishStats: { [key: string]: DishStats } = {};
     const totalReviewCount = reviews.length;
 
-    // Group reviews by dish_name
+    // Group reviews by dish_name OR dish_concept_id
     const reviewsByDish: { [key: string]: any[] } = {};
     reviews.forEach((review: any) => {
-      // Use case-insensitive grouping for robustness
-      const dishKey = review.dish_name;
+      // Logic: Prefer grouping by Concept for "Smart Search"
+      // but fallback to dish_name for backwards compatibility
+      const dishKey = review.dish_concept_id || review.dish_name;
       if (!reviewsByDish[dishKey]) {
         reviewsByDish[dishKey] = [];
       }
@@ -68,7 +120,6 @@ export const getListingsWithStats = async (filters: {
         ? reviewsWithTax.reduce((sum, r) => sum + (r.service_tax || 0), 0) / reviewsWithTax.length 
         : undefined;
 
-      // Find best comment (most liked)
       const reviewsWithComments = dishReviews.filter(r => r.text && r.text.trim().length > 0);
       const bestReview = reviewsWithComments.length > 0
         ? reviewsWithComments.reduce((prev, curr) => (curr.likes || 0) > (prev.likes || 0) ? curr : prev, reviewsWithComments[0])
@@ -103,15 +154,19 @@ export const getListingsWithStats = async (filters: {
   let filtered = listingsWithStats;
   if (filters.selectedDish && filters.selectedDish !== 'All') {
     if (filters.selectedDish === 'custom' && filters.customDish) {
-      const search = filters.customDish.toLowerCase();
+      const dbSearch = filters.customDish.toLowerCase().trim();
       filtered = listingsWithStats.filter(l => {
-        const matchesName = l.name.toLowerCase().includes(search);
-        const matchesDish = l.dishes?.some(d => d.toLowerCase().includes(search));
-        const hasStats = l.dishStats && Object.keys(l.dishStats).some(k => k.toLowerCase().includes(search));
-        return matchesName || matchesDish || hasStats;
+        const matchesName = l.name.toLowerCase().includes(dbSearch);
+        const matchesDish = l.dishes?.some(d => d.toLowerCase().includes(dbSearch));
+        // Smart Check: 
+        // 1. Matches text in dishStats keys
+        // 2. OR matches one of the resolved CONCEPT IDs from the aliases table
+        const hasStatsText = l.dishStats && Object.keys(l.dishStats).some(k => k.toLowerCase().includes(dbSearch));
+        const hasResolvedConcept = l.dishStats && Object.keys(l.dishStats).some(k => resolvedConceptIds.includes(k));
+        
+        return matchesName || matchesDish || hasStatsText || hasResolvedConcept;
       });
     } else {
-      // For predefined dishes, check for exact match in stats keys
       filtered = listingsWithStats.filter(l => l.dishStats && l.dishStats[filters.selectedDish!]);
     }
   }

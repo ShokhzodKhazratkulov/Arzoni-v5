@@ -50,6 +50,7 @@ export interface Dish {
 export interface Review {
   id: string;
   listing_id: string;
+  dish_concept_id?: string;
   dish_name: string;
   price_paid: number;
   rating: number;
@@ -66,6 +67,22 @@ export interface Review {
   price_per_pax?: number;
   service_tax?: number;
   created_at: string;
+}
+
+export interface DishConcept {
+  id: string;
+  canonical_name: string;
+  category: 'food' | 'clothes';
+  emoji?: string;
+  is_verified: boolean;
+  created_at: string;
+}
+
+export interface DishAlias {
+  id: string;
+  concept_id: string;
+  name: string;
+  language_code: string;
 }
 
 export interface Banner {
