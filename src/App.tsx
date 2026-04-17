@@ -117,6 +117,7 @@ function AppContent() {
       const listingsData = await getListingsWithStats({
         type: selectedCategory,
         selectedDish: selectedDish,
+        customDish: customDish,
         sort: sortOption
       });
       
@@ -126,6 +127,7 @@ function AppContent() {
         const seededData = await getListingsWithStats({
           type: selectedCategory,
           selectedDish: selectedDish,
+          customDish: customDish,
           sort: sortOption
         });
         setListings(seededData);
@@ -143,8 +145,12 @@ function AppContent() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [selectedCategory, selectedDish, sortOption]);
+    const timer = setTimeout(() => {
+      fetchData();
+    }, selectedDish === 'custom' ? 500 : 0);
+    
+    return () => clearTimeout(timer);
+  }, [selectedCategory, selectedDish, customDish, sortOption]);
 
   const filteredListings = useMemo(() => {
     return listings.filter(listing => {
@@ -158,10 +164,17 @@ function AppContent() {
         if (!matchesName && !matchesDish && !hasSpecificReview) return false;
       }
 
-      // If "All" is selected, we use the listing's overall avg_price
-      // Otherwise we use the stats for the specific dish
-      const stats = (selectedDish === 'All' || selectedDish === 'custom') ? null : listing.dishStats?.[selectedDish];
-      const priceToFilter = (selectedDish === 'All' || selectedDish === 'custom') ? listing.avg_price : stats?.avgPrice;
+      // Determine the correct price for filtering
+      let priceToFilter = listing.avg_price;
+      if (selectedDish === 'custom' && customDish) {
+        const search = customDish.toLowerCase();
+        const matchingKey = Object.keys(listing.dishStats || {}).find(k => k.toLowerCase() === search);
+        if (matchingKey && listing.dishStats) {
+          priceToFilter = listing.dishStats[matchingKey].avgPrice;
+        }
+      } else if (selectedDish !== 'All' && selectedDish !== 'custom') {
+        priceToFilter = listing.dishStats?.[selectedDish]?.avgPrice || listing.avg_price;
+      }
       
       // Price filter
       let matchesPrice = true;

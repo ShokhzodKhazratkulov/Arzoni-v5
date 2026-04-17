@@ -3,6 +3,7 @@ import { Listing, DishStats, ListingType } from '../types';
 
 export const getListingsWithStats = async (filters: { 
   selectedDish?: string; 
+  customDish?: string;
   type?: ListingType; 
   searchQuery?: string;
   sort?: string;
@@ -42,10 +43,12 @@ export const getListingsWithStats = async (filters: {
     // Group reviews by dish_name
     const reviewsByDish: { [key: string]: any[] } = {};
     reviews.forEach((review: any) => {
-      if (!reviewsByDish[review.dish_name]) {
-        reviewsByDish[review.dish_name] = [];
+      // Use case-insensitive grouping for robustness
+      const dishKey = review.dish_name;
+      if (!reviewsByDish[dishKey]) {
+        reviewsByDish[dishKey] = [];
       }
-      reviewsByDish[review.dish_name].push(review);
+      reviewsByDish[dishKey].push(review);
     });
 
     // Compute stats for each dish
@@ -99,40 +102,58 @@ export const getListingsWithStats = async (filters: {
   // Filter by selected dish if provided
   let filtered = listingsWithStats;
   if (filters.selectedDish && filters.selectedDish !== 'All') {
-    filtered = listingsWithStats.filter(l => l.dishStats && l.dishStats[filters.selectedDish!]);
+    if (filters.selectedDish === 'custom' && filters.customDish) {
+      const search = filters.customDish.toLowerCase();
+      filtered = listingsWithStats.filter(l => {
+        const matchesName = l.name.toLowerCase().includes(search);
+        const matchesDish = l.dishes?.some(d => d.toLowerCase().includes(search));
+        const hasStats = l.dishStats && Object.keys(l.dishStats).some(k => k.toLowerCase().includes(search));
+        return matchesName || matchesDish || hasStats;
+      });
+    } else {
+      // For predefined dishes, check for exact match in stats keys
+      filtered = listingsWithStats.filter(l => l.dishStats && l.dishStats[filters.selectedDish!]);
+    }
   }
+
+  // Sort helper function to find specific dish price accurately
+  const getDishPrice = (listing: Listing, dishId?: string, customStr?: string) => {
+    if (!dishId || dishId === 'All') return listing.avg_price || Infinity;
+    
+    let stats = null;
+    if (dishId === 'custom' && customStr) {
+      const search = customStr.toLowerCase();
+      const matchingKey = Object.keys(listing.dishStats || {}).find(k => k.toLowerCase() === search);
+      stats = matchingKey ? listing.dishStats![matchingKey] : null;
+    } else {
+      stats = listing.dishStats?.[dishId];
+    }
+    
+    return stats ? stats.avgPrice : (listing.avg_price || Infinity);
+  };
+
+  const getDishRating = (listing: Listing, dishId?: string, customStr?: string) => {
+    if (!dishId || dishId === 'All') return listing.totalAvgRating || 0;
+    
+    let stats = null;
+    if (dishId === 'custom' && customStr) {
+      const search = customStr.toLowerCase();
+      const matchingKey = Object.keys(listing.dishStats || {}).find(k => k.toLowerCase() === search);
+      stats = matchingKey ? listing.dishStats![matchingKey] : null;
+    } else {
+      stats = listing.dishStats?.[dishId];
+    }
+    
+    return stats ? stats.avgRating : (listing.totalAvgRating || 0);
+  };
 
   // Sort
   if (filters.sort === 'price_asc') {
-    filtered.sort((a, b) => {
-      const priceA = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (a.dishStats?.[filters.selectedDish]?.avgPrice || Infinity) 
-        : (a.avg_price || Infinity);
-      const priceB = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (b.dishStats?.[filters.selectedDish]?.avgPrice || Infinity) 
-        : (b.avg_price || Infinity);
-      return priceA - priceB;
-    });
+    filtered.sort((a, b) => getDishPrice(a, filters.selectedDish, filters.customDish) - getDishPrice(b, filters.selectedDish, filters.customDish));
   } else if (filters.sort === 'price_desc') {
-    filtered.sort((a, b) => {
-      const priceA = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (a.dishStats?.[filters.selectedDish]?.avgPrice || 0) 
-        : (a.avg_price || 0);
-      const priceB = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (b.dishStats?.[filters.selectedDish]?.avgPrice || 0) 
-        : (b.avg_price || 0);
-      return priceB - priceA;
-    });
+    filtered.sort((a, b) => getDishPrice(b, filters.selectedDish, filters.customDish) - getDishPrice(a, filters.selectedDish, filters.customDish));
   } else if (filters.sort === 'rating') {
-    filtered.sort((a, b) => {
-      const ratingA = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (a.dishStats?.[filters.selectedDish]?.avgRating || 0) 
-        : (a.totalAvgRating || 0);
-      const ratingB = (filters.selectedDish && filters.selectedDish !== 'All') 
-        ? (b.dishStats?.[filters.selectedDish]?.avgRating || 0) 
-        : (b.totalAvgRating || 0);
-      return ratingB - ratingA;
-    });
+    filtered.sort((a, b) => getDishRating(b, filters.selectedDish, filters.customDish) - getDishRating(a, filters.selectedDish, filters.customDish));
   }
 
   // Always put sponsored first
