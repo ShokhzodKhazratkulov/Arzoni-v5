@@ -27,13 +27,18 @@ async function startServer() {
   const isProd = process.env.NODE_ENV === "production";
 
   if (isProd) {
-    // In production, serve from the 'dist' directory
-    const distPath = path.resolve(process.cwd(), 'dist');
+    const distPath = path.resolve(__dirname, 'dist');
     app.use(express.static(distPath));
     
     // SPA fallback
     app.get('*', (req, res) => {
-      res.sendFile(path.resolve(distPath, 'index.html'));
+      const indexPath = path.resolve(distPath, 'index.html');
+      res.sendFile(indexPath, (err) => {
+        if (err) {
+          console.error(`Error sending index.html from ${indexPath}:`, err);
+          res.status(500).send("Application load error. Please try again later.");
+        }
+      });
     });
   } else {
     // In development, use Vite middleware

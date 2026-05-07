@@ -410,8 +410,10 @@ function AppContent() {
             </main>
           } />
           <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
+          <Route path="/restaurant/:id" element={<RestaurantDetailPage />} />
           <Route path="/place/:id" element={<RestaurantDetailPage />} />
           <Route path="/restaurants/:id/review" element={<AddReviewPage onReviewAdded={fetchData} />} />
+          <Route path="/restaurant/:id/review" element={<AddReviewPage onReviewAdded={fetchData} />} />
           <Route path="/login" element={<LoginPage />} />
         </Routes>
 
