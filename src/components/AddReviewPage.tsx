@@ -153,6 +153,7 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
         text: form.text,
         tags: form.tags,
         photo_urls: uploadedPhotoUrls,
+        language_code: i18n.language || 'uz',
       });
 
       if (onReviewAdded) {

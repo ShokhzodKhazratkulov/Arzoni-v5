@@ -66,6 +66,7 @@ export interface Review {
   dislikes?: number;
   price_per_pax?: number;
   service_tax?: number;
+  language_code?: string;
   created_at: string;
 }
 

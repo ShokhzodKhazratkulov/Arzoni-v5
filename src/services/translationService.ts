@@ -69,3 +69,54 @@ export async function translateText(text: string, targetLang: string): Promise<s
   const [result] = await translateBatch([text], targetLang);
   return result;
 }
+
+export interface TranslatedReview {
+  lang: string;
+  title: string;
+  text: string;
+}
+
+export async function translateReviewFull(
+  title: string, 
+  text: string, 
+  originalLang: string
+): Promise<TranslatedReview[]> {
+  const targetLangs = ['uz', 'ru', 'en'].filter(l => l !== originalLang);
+  const results: TranslatedReview[] = [];
+
+  try {
+    const prompt = `Translate this food review into the following languages: ${targetLangs.join(', ')}.
+    Original Language: ${originalLang}
+    Title: "${title}"
+    Text: "${text}"
+    
+    Return a JSON array of objects with keys: "lang", "title", "text".
+    Ensure the cultural context of Uzbek food (Osh, Somsa, etc.) is preserved. 
+    If a word is a specific dish name like "Osh", keep it or use the appropriate local translation (e.g., "Плов" for Russian).`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              lang: { type: Type.STRING },
+              title: { type: Type.STRING },
+              text: { type: Type.STRING }
+            }
+          }
+        }
+      }
+    });
+
+    const translations = JSON.parse(response.text || '[]');
+    return translations;
+  } catch (error) {
+    console.error("Full review translation failed:", error);
+    return [];
+  }
+}

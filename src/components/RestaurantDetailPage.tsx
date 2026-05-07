@@ -30,7 +30,7 @@ export default function RestaurantDetailPage() {
     try {
       const [restData, revData] = await Promise.all([
         getListingById(id),
-        getReviewsByListingId(id)
+        getReviewsByListingId(id, i18n.language)
       ]);
 
       if (restData) {
@@ -49,7 +49,7 @@ export default function RestaurantDetailPage() {
 
   useEffect(() => {
     fetchData();
-  }, [id]);
+  }, [id, i18n.language]);
 
   const handleUpdateListing = async (data: any) => {
     try {
@@ -100,14 +100,20 @@ export default function RestaurantDetailPage() {
 
   useEffect(() => {
     const translateReviews = async () => {
+      // With the new getReviewsByListingId, we don't need to manually translateBatch on every render.
+      // But we can keep it as a safe fallback if no translation is found in DB.
       if (reviews.length === 0) return;
       
+      const missingTranslations = (reviews as any[]).filter(r => !r.isTranslated && r.language_code !== i18n.language && r.text);
+      
+      if (missingTranslations.length === 0) return;
+
       setIsTranslating(true);
-      const comments = reviews.map(r => r.text || '');
+      const comments = missingTranslations.map(r => r.text || '');
       try {
         const translated = await translateBatch(comments, i18n.language);
-        const newTranslations: Record<string, string> = {};
-        reviews.forEach((r, i) => {
+        const newTranslations: Record<string, string> = { ...translatedReviews };
+        missingTranslations.forEach((r, i) => {
           if (r.id) newTranslations[r.id] = translated[i];
         });
         setTranslatedReviews(newTranslations);
