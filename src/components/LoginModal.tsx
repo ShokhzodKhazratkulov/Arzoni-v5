@@ -31,7 +31,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     try {
       if (isSignUp) {
         await signUp(email, password, fullName);
-        setError('Please check your email to verify your account or sign in if verification is disabled.');
+        setError('Success! You can now sign in.');
+        setIsSignUp(false);
       } else {
         await signIn(email, password);
         onClose();
