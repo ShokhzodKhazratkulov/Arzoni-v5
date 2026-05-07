@@ -18,7 +18,7 @@ interface AddReviewPageProps {
 export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
 
   if (!user) {
