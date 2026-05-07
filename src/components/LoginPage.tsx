@@ -7,12 +7,13 @@ import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const { user, signInWithEmail, signInWithGoogle, signInAsAdmin } = useAuth();
+  const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
-  const [identity, setIdentity] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // If already logged in, go back or to home
@@ -22,28 +23,22 @@ export default function LoginPage() {
     }
   }, [user, navigate]);
 
-  const showPasswordField = identity.trim() === 'Shokhzod';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!identity) return;
+    if (!email || !password) return;
 
     setLoading(true);
     setError(null);
     try {
-      if (showPasswordField) {
-        const success = await signInAsAdmin(identity, password);
-        if (success) {
-          navigate(-1);
-        } else {
-          setError('Invalid admin credentials');
-        }
+      if (isSignUp) {
+        await signUp(email, password, fullName);
+        setError('Please check your email to verify your account or sign in if verification is disabled.');
       } else {
-        await signInWithEmail(identity);
-        setSent(true);
+        await signIn(email, password);
+        navigate(-1);
       }
     } catch (err: any) {
-      console.error('Login error:', err);
+      console.error('Auth error:', err);
       setError(err.message || 'Failed to sign in');
     } finally {
       setLoading(false);
@@ -68,105 +63,95 @@ export default function LoginPage() {
           <div className="w-12 h-12 bg-[#1D9E75] rounded-xl flex items-center justify-center text-white shadow-lg mx-auto mb-4">
             <MapPin size={24} />
           </div>
-          <h1 className="text-3xl font-black text-gray-900">{t('welcomeBack')}</h1>
-          <p className="text-gray-500 font-medium">{t('loginSubtitle')}</p>
+          <h1 className="text-3xl font-black text-gray-900">
+            {isSignUp ? t('joinArzoni') : t('welcomeBack')}
+          </h1>
+          <p className="text-gray-500 font-medium">
+            {isSignUp ? 'Create your profile to start exploring' : t('loginSubtitle')}
+          </p>
         </div>
 
-        {sent ? (
-          <div className="text-center space-y-6 py-4">
-            <div className="w-20 h-20 bg-[#1D9E75]/10 rounded-full flex items-center justify-center text-[#1D9E75] mx-auto">
-              <CheckCircle2 size={40} />
-            </div>
-            <div>
-              <h3 className="text-2xl font-black text-gray-900 mb-2">{t('checkEmail')}</h3>
-              <p className="text-sm text-gray-500 font-medium leading-relaxed">
-                {t('magicLinkSent')} <span className="font-bold text-gray-900">{identity}</span>.
-              </p>
-            </div>
-            <button
-              onClick={() => navigate('/')}
-              className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
-            >
-              {t('gotIt')}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <button
-              onClick={() => signInWithGoogle()}
-              className="w-full h-14 bg-white border border-gray-200 text-gray-900 rounded-2xl font-bold hover:bg-gray-50 transition-all flex items-center justify-center gap-3 shadow-sm"
-            >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-              <span className="text-sm">{t('continueWithGoogle')}</span>
-            </button>
-
-            <div className="relative flex items-center justify-center">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-100"></div>
-              </div>
-              <span className="relative px-3 bg-white text-[10px] font-black text-gray-300 uppercase tracking-widest">{t('orEmail')}</span>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {isSignUp && (
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('emailAddress')}</label>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input
-                    type="email"
+                    type="text"
                     required
-                    value={identity}
-                    onChange={(e) => setIdentity(e.target.value)}
-                    placeholder="name@example.com"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="John Doe"
                     className="w-full pl-12 pr-4 h-14 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/20 transition-all"
                   />
                 </div>
               </div>
+            )}
 
-              {showPasswordField && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('password')}</label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full pl-12 pr-4 h-14 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/20 transition-all"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100">
-                  <AlertCircle size={14} className="shrink-0" />
-                  <p>{error}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-[#1D9E75] text-white h-14 rounded-2xl font-black text-base shadow-lg shadow-[#1D9E75]/10 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <span>{t('signIn')}</span>
-                )}
-              </button>
-            </form>
-
-            <div className="text-center pt-2">
-              <p className="text-xs font-bold text-gray-400">
-                {t('noAccount')} <button className="text-[#1D9E75] hover:underline">{t('joinArzoni')}</button>
-              </p>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('emailAddress')}</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full pl-12 pr-4 h-14 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/20 transition-all"
+                />
+              </div>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('password')}</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-12 pr-4 h-14 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/20 transition-all"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100">
+                <AlertCircle size={14} className="shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#1D9E75] text-white h-14 rounded-2xl font-black text-base shadow-lg shadow-[#1D9E75]/10 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <span>{isSignUp ? 'Sign Up' : t('signIn')}</span>
+              )}
+            </button>
+          </form>
+
+          <div className="text-center pt-2">
+            <p className="text-xs font-bold text-gray-400">
+              {isSignUp ? 'Already have an account?' : t('noAccount')}{' '}
+              <button 
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-[#1D9E75] hover:underline"
+              >
+                {isSignUp ? t('signIn') : t('joinArzoni')}
+              </button>
+            </p>
           </div>
-        )}
+        </div>
       </motion.div>
     </div>
   );

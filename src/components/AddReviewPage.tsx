@@ -19,7 +19,7 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   if (!user) {
     return (
@@ -154,6 +154,7 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
         tags: form.tags,
         photo_urls: uploadedPhotoUrls,
         language_code: i18n.language || 'uz',
+        submitter_name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
       });
 
       if (onReviewAdded) {

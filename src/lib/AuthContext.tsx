@@ -1,68 +1,72 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { supabase } from '../supabase';
 import { User, Session } from '@supabase/supabase-js';
+import { Profile } from '../types';
 
 interface AuthContextType {
   user: User | null;
+  profile: Profile | null;
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
-  signInWithGoogle: () => Promise<void>;
-  signInWithEmail: (email: string) => Promise<void>;
-  signInAsAdmin: (username: string, password: string) => Promise<boolean>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName?: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Define the admin emails here
-const ADMIN_EMAILS = ['khazratkulovshokhzod@gmail.com'];
-const ADMIN_CREDENTIALS = {
-  username: 'Shokhzod',
-  password: 'Shokhzod03@'
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [mockAdminActive, setMockAdminActive] = useState(false);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.warn('Profile fetch error:', error.message);
+        return null;
+      }
+      return data as Profile;
+    } catch (err) {
+      console.error('Error in fetchProfile:', err);
+      return null;
+    }
+  };
 
   useEffect(() => {
-    // Check locally stored mock admin
-    const isMockAdmin = localStorage.getItem('mock_admin_active') === 'true';
-    if (isMockAdmin) {
-      setMockAdminActive(true);
-      setIsAdmin(true);
-      // Create a mock user object
-      const mockUser = {
-        id: 'mock-admin-id',
-        email: ADMIN_EMAILS[0],
-        user_metadata: { full_name: 'Admin Shokhzod' },
-        app_metadata: {},
-        aud: 'authenticated',
-        created_at: new Date().toISOString()
-      } as unknown as User;
-      setUser(mockUser);
-    }
-
     // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isMockAdmin) {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsAdmin(!!session?.user?.email && ADMIN_EMAILS.includes(session.user.email));
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        const userProfile = await fetchProfile(currentUser.id);
+        setProfile(userProfile);
       }
       setLoading(false);
     });
 
     // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!localStorage.getItem('mock_admin_active')) {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsAdmin(!!session?.user?.email && ADMIN_EMAILS.includes(session.user.email));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        const userProfile = await fetchProfile(currentUser.id);
+        setProfile(userProfile);
+      } else {
+        setProfile(null);
       }
       setLoading(false);
     });
@@ -70,62 +74,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
-    if (error) throw error;
-  };
-
-  const signInWithEmail = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
       email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
+      password,
     });
     if (error) throw error;
   };
 
-  const signInAsAdmin = async (username: string, password: string): Promise<boolean> => {
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-      localStorage.setItem('mock_admin_active', 'true');
-      setMockAdminActive(true);
-      setIsAdmin(true);
-      const mockUser = {
-        id: 'mock-admin-id',
-        email: ADMIN_EMAILS[0],
-        user_metadata: { full_name: 'Admin Shokhzod' },
-        app_metadata: {},
-        aud: 'authenticated',
-        created_at: new Date().toISOString()
-      } as unknown as User;
-      setUser(mockUser);
-      return true;
-    }
-    return false;
+  const signUp = async (email: string, password: string, fullName?: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
+    if (error) throw error;
   };
 
   const signOut = async () => {
-    localStorage.removeItem('mock_admin_active');
-    setMockAdminActive(false);
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
 
+  const refreshProfile = async () => {
+    if (user) {
+      const userProfile = await fetchProfile(user.id);
+      setProfile(userProfile);
+    }
+  };
+
+  const isAdmin = useMemo(() => {
+    return profile?.role === 'admin';
+  }, [profile]);
+
   const value = useMemo(() => ({
     user,
+    profile,
     session,
     loading,
     isAdmin,
-    signInWithGoogle,
-    signInWithEmail,
-    signInAsAdmin,
+    signIn,
+    signUp,
     signOut,
-  }), [user, session, loading, isAdmin]);
+    refreshProfile,
+  }), [user, profile, session, loading, isAdmin]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
