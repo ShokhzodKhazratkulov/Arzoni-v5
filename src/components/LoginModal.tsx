@@ -21,6 +21,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,10 +29,11 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
     setLoading(true);
     setError(null);
+    setSuccess(null);
     try {
       if (isSignUp) {
         await signUp(email, password, fullName);
-        setError('Success! You can now sign in.');
+        setSuccess('Success! You can now sign in.');
         setIsSignUp(false);
       } else {
         await signIn(email, password);
@@ -129,6 +131,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         />
                       </div>
                     </div>
+
+                    {success && (
+                      <div className="flex items-center gap-2 p-3 bg-green-50 text-green-600 rounded-xl text-xs font-bold border border-green-100">
+                        <CheckCircle2 size={14} className="shrink-0" />
+                        <p>{success}</p>
+                      </div>
+                    )}
 
                     {error && (
                       <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100">

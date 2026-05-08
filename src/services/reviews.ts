@@ -14,31 +14,45 @@ export const createReview = async (data: Partial<Review>) => {
   // Try to generate translations in the background (or foreground for simple persistence)
   if (review && (review.text || review.title)) {
     try {
-      // 1. Save the original to review_translations table
-      await supabase.from('review_translations').insert([{
-        review_id: review.id,
-        language_code: review.language_code || 'uz',
-        title: review.title,
-        text: review.text,
-        is_original: true
-      }]);
-
-      // 2. Generate and save translations
-      const translations = await translateReviewFull(
+      // 1. Generate and save translations (includes detection)
+      const { detectedLang, translations } = await translateReviewFull(
         review.title || '', 
         review.text || '', 
         review.language_code || 'uz'
       );
 
+      // 2. Update the original review with the detected language if it's different and save as original
+      const finalOriginalLang = detectedLang || review.language_code || 'uz';
+      
+      // Save the detected/final original to review_translations table
+      await supabase.from('review_translations').insert([{
+        review_id: review.id,
+        language_code: finalOriginalLang,
+        title: review.title,
+        text: review.text,
+        is_original: true
+      }]);
+
       if (translations.length > 0) {
-        const transInserts = translations.map(t => ({
-          review_id: review.id,
-          language_code: t.lang,
-          title: t.title,
-          text: t.text,
-          is_original: false
-        }));
-        await supabase.from('review_translations').insert(transInserts);
+        // We filter out any translation that matches the detected original language to avoid duplicates
+        const transInserts = translations
+          .filter(t => t.lang !== finalOriginalLang)
+          .map(t => ({
+            review_id: review.id,
+            language_code: t.lang,
+            title: t.title,
+            text: t.text,
+            is_original: false
+          }));
+        
+        if (transInserts.length > 0) {
+          await supabase.from('review_translations').insert(transInserts);
+        }
+      }
+
+      // 3. Optional: Sync the original review's language_code if it changed
+      if (detectedLang && detectedLang !== review.language_code) {
+        await supabase.from('reviews').update({ language_code: detectedLang }).eq('id', review.id);
       }
     } catch (transError) {
       console.warn("Translation failed for some languages:", transError);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
-import { Mail, CheckCircle2, AlertCircle, Lock, ChevronLeft, MapPin } from 'lucide-react';
+import { Mail, CheckCircle2, AlertCircle, Lock, ChevronLeft, MapPin, User } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // If already logged in, go back or to home
   useEffect(() => {
@@ -29,10 +30,11 @@ export default function LoginPage() {
 
     setLoading(true);
     setError(null);
+    setSuccess(null);
     try {
       if (isSignUp) {
         await signUp(email, password, fullName);
-        setError('Success! You can now sign in with your credentials.');
+        setSuccess('Account created! You can now sign in.');
         setIsSignUp(false);
       } else {
         await signIn(email, password);
@@ -120,6 +122,13 @@ export default function LoginPage() {
                 />
               </div>
             </div>
+
+            {success && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 text-green-600 rounded-xl text-xs font-bold border border-green-100">
+                <CheckCircle2 size={14} className="shrink-0" />
+                <p>{success}</p>
+              </div>
+            )}
 
             {error && (
               <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100">

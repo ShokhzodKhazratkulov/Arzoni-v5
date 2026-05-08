@@ -50,7 +50,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentUser);
       
       if (currentUser) {
-        const userProfile = await fetchProfile(currentUser.id);
+        let userProfile = await fetchProfile(currentUser.id);
+        
+        if (!userProfile) {
+          console.log('No profile found during initial session check, attempting to create...');
+          const { error: upsertError } = await supabase.from('profiles').upsert({
+            id: currentUser.id,
+            email: currentUser.email,
+            full_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0],
+            role: (currentUser.email && ['khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com'].includes(currentUser.email)) ? 'admin' : 'user',
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+          
+          if (!upsertError) {
+            userProfile = await fetchProfile(currentUser.id);
+          }
+        }
         setProfile(userProfile);
       }
       setLoading(false);
@@ -63,8 +78,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentUser);
       
       if (currentUser) {
+        console.log('Auth state change: User detected', currentUser.id);
         const userProfile = await fetchProfile(currentUser.id);
-        setProfile(userProfile);
+        
+        if (!userProfile) {
+          console.log('No profile found during auth state change, attempting to create...');
+          const { error: upsertError } = await supabase.from('profiles').upsert({
+            id: currentUser.id,
+            email: currentUser.email,
+            full_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0],
+            role: (currentUser.email && ['khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com'].includes(currentUser.email)) ? 'admin' : 'user',
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+          
+          if (upsertError) {
+            console.error('Error creating profile in onAuthStateChange:', upsertError);
+          } else {
+            console.log('Profile created successfully in onAuthStateChange');
+            const refreshed = await fetchProfile(currentUser.id);
+            setProfile(refreshed);
+          }
+        } else {
+          setProfile(userProfile);
+        }
       } else {
         setProfile(null);
       }
@@ -75,24 +111,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: { user }, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
     if (error) throw error;
+
+    if (user) {
+      try {
+        // Ensure profile exists on sign in
+        const { data: existingProfile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (fetchError) {
+          console.error('Error fetching profile during sign in:', fetchError);
+        }
+        
+        if (!existingProfile) {
+          console.log('No profile found for user, creating one...');
+          const { error: upsertError } = await supabase.from('profiles').upsert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || email.split('@')[0],
+            role: (user.email && ['khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com'].includes(user.email)) ? 'admin' : 'user',
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+          
+          if (upsertError) {
+            console.error('Error creating profile during sign in:', upsertError);
+          } else {
+            console.log('Profile created successfully on sign in');
+          }
+        }
+        await refreshProfile();
+      } catch (err) {
+        console.error('Unexpected error in profile initialization during sign in:', err);
+      }
+    }
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           full_name: fullName,
+          role: 'user'
         },
       },
     });
+    
     if (error) throw error;
+
+    if (data.user) {
+      try {
+        console.log('Attempting to create profile for new user:', data.user.id);
+        const { error: upsertError } = await supabase.from('profiles').upsert({
+          id: data.user.id,
+          email: data.user.email,
+          full_name: fullName || data.user.user_metadata?.full_name || email.split('@')[0],
+          role: (data.user.email && ['khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com'].includes(data.user.email)) ? 'admin' : 'user',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+        
+        if (upsertError) {
+          console.error('Error creating profile during sign up:', upsertError);
+          // If this fails, it might be because the user isn't confirmed yet 
+          // and RLS prevents insertion by unauthenticated users.
+        } else {
+          console.log('Profile created successfully on sign up');
+        }
+        await refreshProfile();
+      } catch (err) {
+        console.error('Unexpected error in profile creation during sign up:', err);
+      }
+    }
   };
 
   const signOut = async () => {
@@ -108,8 +206,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = useMemo(() => {
-    const godModeEmail = 'abdullayevamuborak548@gmail.com';
-    return profile?.role === 'admin' || user?.email === godModeEmail;
+    const adminEmails = ['khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com'];
+    return profile?.role === 'admin' || (user?.email && adminEmails.includes(user.email));
   }, [profile, user]);
 
   const value = useMemo(() => ({
