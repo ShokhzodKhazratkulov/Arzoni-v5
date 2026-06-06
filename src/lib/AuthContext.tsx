@@ -17,6 +17,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const checkIsAdminEmail = async (email: string | undefined): Promise<boolean> => {
+  if (!email) return false;
+  try {
+    const { count, error } = await supabase
+      .from('admin_emails')
+      .select('id', { count: 'exact', head: true })
+      .eq('email', email);
+    
+    if (error) {
+      console.warn('Error checking admin email:', error.message);
+      return false;
+    }
+    return (count || 0) > 0;
+  } catch (err) {
+    console.error('Unexpected error checking admin email:', err);
+    return false;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -54,11 +73,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (!userProfile) {
           console.log('No profile found during initial session check, attempting to create...');
+          const isAdminEmail = await checkIsAdminEmail(currentUser.email);
           const { error: upsertError } = await supabase.from('profiles').upsert({
             id: currentUser.id,
             email: currentUser.email,
             full_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0],
-            role: (currentUser.email && ['khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com'].includes(currentUser.email)) ? 'admin' : 'user',
+            role: isAdminEmail ? 'admin' : 'user',
             updated_at: new Date().toISOString()
           }, { onConflict: 'id' });
           
@@ -83,11 +103,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (!userProfile) {
           console.log('No profile found during auth state change, attempting to create...');
+          const isAdminEmail = await checkIsAdminEmail(currentUser.email);
           const { error: upsertError } = await supabase.from('profiles').upsert({
             id: currentUser.id,
             email: currentUser.email,
             full_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0],
-            role: (currentUser.email && ['khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com'].includes(currentUser.email)) ? 'admin' : 'user',
+            role: isAdminEmail ? 'admin' : 'user',
             updated_at: new Date().toISOString()
           }, { onConflict: 'id' });
           
@@ -133,11 +154,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (!existingProfile) {
           console.log('No profile found for user, creating one...');
+          const isAdminEmail = await checkIsAdminEmail(user.email);
           const { error: upsertError } = await supabase.from('profiles').upsert({
             id: user.id,
             email: user.email,
             full_name: user.user_metadata?.full_name || email.split('@')[0],
-            role: (user.email && ['khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com'].includes(user.email)) ? 'admin' : 'user',
+            role: isAdminEmail ? 'admin' : 'user',
             updated_at: new Date().toISOString()
           }, { onConflict: 'id' });
           
@@ -171,11 +193,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (data.user) {
       try {
         console.log('Attempting to create profile for new user:', data.user.id);
+        const isAdminEmail = await checkIsAdminEmail(data.user.email);
         const { error: upsertError } = await supabase.from('profiles').upsert({
           id: data.user.id,
           email: data.user.email,
           full_name: fullName || data.user.user_metadata?.full_name || email.split('@')[0],
-          role: (data.user.email && ['khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com'].includes(data.user.email)) ? 'admin' : 'user',
+          role: isAdminEmail ? 'admin' : 'user',
           updated_at: new Date().toISOString()
         }, { onConflict: 'id' });
         
@@ -206,9 +229,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = useMemo(() => {
-    const adminEmails = ['khazratkulovshokhzod@gmail.com', 'abdullayevamuborak548@gmail.com'];
-    return profile?.role === 'admin' || (user?.email && adminEmails.includes(user.email));
-  }, [profile, user]);
+    return profile?.role === 'admin';
+  }, [profile]);
 
   const value = useMemo(() => ({
     user,

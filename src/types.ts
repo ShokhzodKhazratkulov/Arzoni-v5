@@ -67,6 +67,7 @@ export interface Review {
   price_per_pax?: number;
   service_tax?: number;
   language_code?: string;
+  device_id?: string;
   created_at: string;
 }
 

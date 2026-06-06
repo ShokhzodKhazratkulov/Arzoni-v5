@@ -101,8 +101,7 @@ export const getListingsWithStats = async (filters: {
   let query = supabase
     .from('listings')
     .select(`
-      *,
-      reviews (*)
+      *
     `)
     .eq('is_active', true);
 
@@ -126,64 +125,11 @@ export const getListingsWithStats = async (filters: {
   }
 
   const listingsWithStats = data.map((listing: any) => {
-    const reviews = listing.reviews || [];
-    const dishStats: { [key: string]: DishStats } = {};
-    const totalReviewCount = reviews.length;
-
-    // Group reviews by dish_name OR dish_concept_id
-    const reviewsByDish: { [key: string]: any[] } = {};
-    reviews.forEach((review: any) => {
-      // Logic: Prefer grouping by Concept for "Smart Search"
-      // but fallback to dish_name for backwards compatibility
-      const dishKey = review.dish_concept_id || review.dish_name;
-      if (!reviewsByDish[dishKey]) {
-        reviewsByDish[dishKey] = [];
-      }
-      reviewsByDish[dishKey].push(review);
-    });
-
-    // Compute stats for each dish
-    Object.keys(reviewsByDish).forEach(dishName => {
-      const dishReviews = reviewsByDish[dishName];
-      const avgPrice = dishReviews.reduce((sum, r) => sum + r.price_paid, 0) / dishReviews.length;
-      const avgRating = dishReviews.reduce((sum, r) => sum + r.rating, 0) / dishReviews.length;
-      const popularity = totalReviewCount > 0 ? dishReviews.length / totalReviewCount : 0;
-
-      const reviewsWithPax = dishReviews.filter(r => r.price_per_pax !== null && r.price_per_pax !== undefined && r.price_per_pax > 0);
-      const avgPricePerPax = reviewsWithPax.length > 0 
-        ? reviewsWithPax.reduce((sum, r) => sum + (r.price_per_pax || 0), 0) / reviewsWithPax.length 
-        : undefined;
-
-      const reviewsWithTax = dishReviews.filter(r => r.service_tax !== null && r.service_tax !== undefined && r.service_tax > 0);
-      const avgServiceTax = reviewsWithTax.length > 0 
-        ? reviewsWithTax.reduce((sum, r) => sum + (r.service_tax || 0), 0) / reviewsWithTax.length 
-        : undefined;
-
-      const reviewsWithComments = dishReviews.filter(r => r.text && r.text.trim().length > 0);
-      const bestReview = reviewsWithComments.length > 0
-        ? reviewsWithComments.reduce((prev, curr) => (curr.likes || 0) > (prev.likes || 0) ? curr : prev, reviewsWithComments[0])
-        : null;
-
-      dishStats[dishName] = {
-        name: dishName,
-        avgPrice,
-        avgRating,
-        reviewCount: dishReviews.length,
-        popularity,
-        avgPricePerPax,
-        avgServiceTax,
-        bestComment: bestReview?.text,
-        displayName: dishName
-      };
-    });
-
-    const totalAvgRating = totalReviewCount > 0 
-      ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviewCount 
-      : 0;
+    const totalReviewCount = listing.review_count || 0;
+    const totalAvgRating = Number(listing.avg_rating) || 0;
 
     return {
       ...listing,
-      dishStats,
       totalReviewCount,
       totalAvgRating
     } as Listing;
@@ -196,76 +142,34 @@ export const getListingsWithStats = async (filters: {
       const dbSearch = filters.customDish.toLowerCase().trim();
       filtered = listingsWithStats.filter(l => {
         const matchesName = l.name.toLowerCase().includes(dbSearch);
-        const matchesDish = l.dishes?.some(d => d.toLowerCase().includes(dbSearch));
-        // Smart Check: 
-        // 1. Matches text in dishStats keys
-        // 2. OR matches one of the resolved CONCEPT IDs from the aliases table
-        const hasStatsText = l.dishStats && Object.keys(l.dishStats).some(k => k.toLowerCase().includes(dbSearch));
-        const hasResolvedConcept = l.dishStats && Object.keys(l.dishStats).some(k => resolvedConceptIds.includes(k));
-        
-        return matchesName || matchesDish || hasStatsText || hasResolvedConcept;
+        const matchesDish = l.dishes?.some(d => d.toLowerCase().includes(dbSearch)) ||
+                            l.dishes?.some(d => resolvedConceptIds.includes(d.toLowerCase()));
+        return matchesName || matchesDish;
       });
     } else {
-      filtered = listingsWithStats.filter(l => l.dishStats && l.dishStats[filters.selectedDish!]);
+      const selectedLower = filters.selectedDish.toLowerCase();
+      filtered = listingsWithStats.filter(l => 
+        l.dishes?.some(d => d.toLowerCase() === selectedLower)
+      );
     }
   }
 
-  // Sort helper function to find specific dish price accurately
-  const getDishPrice = (listing: Listing, dishId?: string, customStr?: string, resolvedIds: string[] = []) => {
-    if (!dishId || dishId === 'All') return listing.avg_price || Infinity;
-    
-    let stats = null;
-    if (dishId === 'custom' && customStr) {
-      const search = customStr.toLowerCase();
-      // Try resolved concept IDs first
-      const conceptKey = Object.keys(listing.dishStats || {}).find(k => resolvedIds.includes(k));
-      if (conceptKey) {
-        stats = listing.dishStats![conceptKey];
-      } else {
-        // Fallback to fuzzy text match
-        const matchingKey = Object.keys(listing.dishStats || {}).find(k => 
-          k.toLowerCase().includes(search) || search.includes(k.toLowerCase())
-        );
-        stats = matchingKey ? listing.dishStats![matchingKey] : null;
-      }
-    } else {
-      stats = listing.dishStats?.[dishId];
-    }
-    
-    return stats ? stats.avgPrice : (listing.avg_price || Infinity);
+  // Sort helper function to find specific dish price accurately (using materialized stats)
+  const getDishPrice = (listing: Listing) => {
+    return listing.avg_price || Infinity;
   };
 
-  const getDishRating = (listing: Listing, dishId?: string, customStr?: string, resolvedIds: string[] = []) => {
-    if (!dishId || dishId === 'All') return listing.totalAvgRating || 0;
-    
-    let stats = null;
-    if (dishId === 'custom' && customStr) {
-      const search = customStr.toLowerCase();
-      // Try resolved concept IDs first
-      const conceptKey = Object.keys(listing.dishStats || {}).find(k => resolvedIds.includes(k));
-      if (conceptKey) {
-        stats = listing.dishStats![conceptKey];
-      } else {
-        // Fallback to fuzzy text match
-        const matchingKey = Object.keys(listing.dishStats || {}).find(k => 
-          k.toLowerCase().includes(search) || search.includes(k.toLowerCase())
-        );
-        stats = matchingKey ? listing.dishStats![matchingKey] : null;
-      }
-    } else {
-      stats = listing.dishStats?.[dishId];
-    }
-    
-    return stats ? stats.avgRating : (listing.totalAvgRating || 0);
+  const getDishRating = (listing: Listing) => {
+    return listing.totalAvgRating || 0;
   };
 
   // Sort
   if (filters.sort === 'price_asc') {
-    filtered.sort((a, b) => getDishPrice(a, filters.selectedDish, filters.customDish, resolvedConceptIds) - getDishPrice(b, filters.selectedDish, filters.customDish, resolvedConceptIds));
+    filtered.sort((a, b) => getDishPrice(a) - getDishPrice(b));
   } else if (filters.sort === 'price_desc') {
-    filtered.sort((a, b) => getDishPrice(b, filters.selectedDish, filters.customDish, resolvedConceptIds) - getDishPrice(a, filters.selectedDish, filters.customDish, resolvedConceptIds));
+    filtered.sort((a, b) => getDishPrice(b) - getDishPrice(a));
   } else if (filters.sort === 'rating') {
-    filtered.sort((a, b) => getDishRating(b, filters.selectedDish, filters.customDish, resolvedConceptIds) - getDishRating(a, filters.selectedDish, filters.customDish, resolvedConceptIds));
+    filtered.sort((a, b) => getDishRating(b) - getDishRating(a));
   }
 
   // Always put sponsored first

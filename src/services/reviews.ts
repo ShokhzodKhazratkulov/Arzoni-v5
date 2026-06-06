@@ -1,11 +1,54 @@
 import { supabase } from '../supabase';
 import { Review } from '../types';
 import { translateReviewFull } from './translationService';
+import { getDeviceId } from '../lib/deviceId';
+
+export const checkRateLimit = async (listingId: string): Promise<boolean> => {
+  const deviceId = getDeviceId();
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  
+  const { count, error } = await supabase
+    .from('reviews')
+    .select('id', { count: 'exact', head: true })
+    .eq('device_id', deviceId)
+    .eq('listing_id', listingId)
+    .gt('created_at', twentyFourHoursAgo);
+
+  if (error) {
+    console.error('Error checking rate limit:', error);
+    // Fallback: allow the insert if the DB query fails so the user experience doesn't break
+    return true;
+  }
+
+  return (count || 0) < 3;
+};
+
+export const checkGlobalRateLimit = async (): Promise<boolean> => {
+  const deviceId = getDeviceId();
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  
+  const { count, error } = await supabase
+    .from('reviews')
+    .select('id', { count: 'exact', head: true })
+    .eq('device_id', deviceId)
+    .gt('created_at', twentyFourHoursAgo);
+
+  if (error) {
+    console.error('Error checking global rate limit:', error);
+    // Fallback: allow insert if query fails
+    return true;
+  }
+
+  return (count || 0) < 10;
+};
 
 export const createReview = async (data: Partial<Review>) => {
   const { data: result, error } = await supabase
     .from('reviews')
-    .insert([data])
+    .insert([{
+      ...data,
+      device_id: getDeviceId()
+    }])
     .select();
   
   if (error) throw error;
@@ -103,28 +146,38 @@ export const getReviewsByListingId = async (listingId: string, languageCode?: st
 
 export const likeReview = async (reviewId: string) => {
   const { data, error } = await supabase.rpc('increment_review_likes', { review_id: reviewId });
-  if (error) {
-    // Fallback if RPC is not defined
-    const { data: review } = await supabase.from('reviews').select('likes').eq('id', reviewId).single();
-    const { error: updateError } = await supabase
-      .from('reviews')
-      .update({ likes: (review?.likes || 0) + 1 })
-      .eq('id', reviewId);
-    if (updateError) throw updateError;
-  }
+  if (error) throw error;
   return data;
 };
 
 export const dislikeReview = async (reviewId: string) => {
   const { data, error } = await supabase.rpc('increment_review_dislikes', { review_id: reviewId });
-  if (error) {
-    // Fallback if RPC is not defined
-    const { data: review } = await supabase.from('reviews').select('dislikes').eq('id', reviewId).single();
-    const { error: updateError } = await supabase
-      .from('reviews')
-      .update({ dislikes: (review?.dislikes || 0) + 1 })
-      .eq('id', reviewId);
-    if (updateError) throw updateError;
-  }
+  if (error) throw error;
   return data;
+};
+
+export const getMyReviews = async (listingId: string): Promise<Review[]> => {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('listing_id', listingId)
+    .eq('device_id', getDeviceId())
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+};
+
+export const updateReview = async (reviewId: string, data: Partial<Review>): Promise<Review> => {
+  const { data: result, error } = await supabase
+    .from('reviews')
+    .update(data)
+    .eq('id', reviewId)
+    .eq('device_id', getDeviceId())
+    .select();
+
+  if (error) throw error;
+  if (!result || result.length === 0) {
+    throw new Error('Review not found or permission denied');
+  }
+  return result[0];
 };

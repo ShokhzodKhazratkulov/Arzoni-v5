@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Star, Navigation, MessageSquare, TrendingUp, DollarSign, Tag, Globe, ThumbsUp, ThumbsDown, Phone, Instagram, Send, Edit, MapPin, Clock, Info } from 'lucide-react';
+import { ChevronLeft, Star, Navigation, MessageSquare, TrendingUp, DollarSign, Tag, Globe, ThumbsUp, ThumbsDown, Phone, Instagram, Send, Edit, MapPin, Clock, Info, Pencil } from 'lucide-react';
 import { Review, Listing, DishStats } from '../types';
 import { computeDishStats, filterReviewsByDishAndSort } from '../lib/stats';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { getListingById, updateListing } from '../services/listings';
 import { getReviewsByListingId, likeReview, dislikeReview, createReview } from '../services/reviews';
 import { getMapUrl, uploadImage } from '../lib/utils';
 import AddRestaurantModal from './AddRestaurantModal';
+import { getDeviceId } from '../lib/deviceId';
 
 export default function RestaurantDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -455,19 +456,37 @@ export default function RestaurantDetailPage() {
           <div className="space-y-4">
             {filteredReviews.map((review) => (
               <div key={review.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
                       <MessageSquare size={20} />
                     </div>
                     <div>
-                      <p className="text-sm font-black text-gray-900">{review.submitter_name || t('anonymous')}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-black text-gray-900">{review.submitter_name || t('anonymous')}</p>
+                        {review.device_id === getDeviceId() && (
+                          <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-bold rounded">
+                            {t('yourReview', 'Your review')}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[10px] text-gray-400 font-bold">{new Date(review.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg">
-                    <Star size={12} className="text-yellow-400 fill-yellow-400" />
-                    <span className="text-xs font-black text-gray-900">{review.rating}</span>
+                  <div className="flex items-center gap-2">
+                    {review.device_id === getDeviceId() && (
+                      <button
+                        onClick={() => navigate(`/restaurants/${id}/review`, { state: { review } })}
+                        className="p-1.5 text-gray-500 hover:text-[#1D9E75] hover:bg-gray-50 rounded-lg transition-colors border border-gray-100"
+                        title={t('editReview', 'Edit Review')}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                    <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg">
+                      <Star size={12} className="text-yellow-400 fill-yellow-400" />
+                      <span className="text-xs font-black text-gray-900">{review.rating}</span>
+                    </div>
                   </div>
                 </div>
                 

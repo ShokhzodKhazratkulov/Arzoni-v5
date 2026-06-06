@@ -1,7 +1,3 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-
 // Simple in-memory cache to store translations
 const translationCache: Record<string, string> = {};
 
@@ -24,27 +20,25 @@ export async function translateBatch(texts: string[], targetLang: string): Promi
   if (toTranslate.length === 0) return results;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Translate the following list of strings into ${targetLang}. 
-      Return a JSON array of strings in the exact same order.
-      Keep the word "Arzoni" as is, do not translate it.
-      
-      Strings to translate:
-      ${JSON.stringify(toTranslate.map(t => t.text))}`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        }
-      }
+    const apiResponse = await fetch('/api/ai/translate-batch', {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        texts: toTranslate.map(t => t.text),
+        targetLang
+      })
     });
+
+    if (!apiResponse.ok) {
+      throw new Error(`AI translate batch failed with status ${apiResponse.status}`);
+    }
+
+    const { translations } = await apiResponse.json();
     
-    const translatedArray = JSON.parse(response.text || '[]');
-    
-    if (Array.isArray(translatedArray)) {
-      translatedArray.forEach((translatedText, i) => {
+    if (Array.isArray(translations)) {
+      translations.forEach((translatedText, i) => {
         if (i < toTranslate.length) {
           const originalIndex = toTranslate[i].index;
           const originalText = toTranslate[i].text;
@@ -89,60 +83,24 @@ export async function translateReviewFull(
   text: string, 
   providedLang?: string
 ): Promise<TranslationResult> {
-  const allLangs = ['uz', 'ru', 'en'];
-
   try {
-    const prompt = `You are a translation assistant for "Arzoni", a local discovery app.
-    Tasks:
-    1. Detect the original language of the following review (it will likely be Uzbek, Russian, or English).
-    2. Translate the review into all of these languages: ${allLangs.join(', ')}.
-    
-    Review Content:
-    Title: "${title}"
-    Text: "${text}"
-    Suggested Original Language (for context): ${providedLang || 'unknown'}
-    
-    Return a JSON object with:
-    - "detectedLang": The ISO 639-1 code of the original language (uz, ru, or en).
-    - "translations": A JSON array of objects with keys: "lang", "title", "text". "lang" must be one of [uz, ru, en].
-    
-    Guidelines:
-    - Preserve cultural context of Uzbek food (Osh, Somsa, Manti, Shashlik, etc.).
-    - Keep "Arzoni" untranslated.
-    - If a word is a specific dish name like "Osh", keep it for Uzbek/English, but use "Плов" for Russian where culturally appropriate, or transliterate if it's a specific brand/style.
-    - The output MUST be valid JSON.`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            detectedLang: { type: Type.STRING },
-            translations: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  lang: { type: Type.STRING },
-                  title: { type: Type.STRING },
-                  text: { type: Type.STRING }
-                },
-                required: ["lang", "title", "text"]
-              }
-            }
-          },
-          required: ["detectedLang", "translations"]
-        }
-      }
+    const apiResponse = await fetch('/api/ai/translate-review', {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        title,
+        text,
+        language_code: providedLang
+      })
     });
 
-    const result = JSON.parse(response.text || '{}');
-    if (!result.detectedLang) result.detectedLang = providedLang || 'uz';
-    if (!result.translations) result.translations = [];
-    
+    if (!apiResponse.ok) {
+      throw new Error(`AI translate review failed with status ${apiResponse.status}`);
+    }
+
+    const result = await apiResponse.json();
     return result as TranslationResult;
   } catch (error) {
     console.error("Full review translation failed:", error);

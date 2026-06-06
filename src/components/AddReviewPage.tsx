@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Star, ChevronLeft, Calendar, Tag, MessageSquare, DollarSign, Info, Camera, X } from 'lucide-react';
-import { AddReviewFormState } from '../types';
+import { AddReviewFormState, Review } from '../types';
 import { DISH_TYPES, CLOTHING_TYPES } from '../constants';
 import { supabase } from '../supabase';
 import { useTranslation } from 'react-i18next';
-import { createReview } from '../services/reviews';
+import { createReview, checkRateLimit, checkGlobalRateLimit, updateReview } from '../services/reviews';
 import { getListingById } from '../services/listings';
 import { resolveDishConcept } from '../services/dishService';
 import { uploadImage, cn } from '../lib/utils';
@@ -18,53 +18,59 @@ interface AddReviewPageProps {
 export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t, i18n } = useTranslation();
   const { user, profile } = useAuth();
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center space-y-6">
-          <div className="w-20 h-20 bg-[#1D9E75]/10 rounded-full flex items-center justify-center mx-auto">
-            <Info size={40} className="text-[#1D9E75]" />
-          </div>
-          <h2 className="text-2xl font-black text-gray-900">{t('loginRequired')}</h2>
-          <p className="text-gray-600">{t('loginToAddReview')}</p>
-          <button
-            onClick={() => navigate('/login')}
-            className="w-full py-4 bg-[#1D9E75] text-white rounded-2xl font-black text-lg shadow-lg shadow-[#1D9E75]/20 hover:scale-[1.02] transition-transform"
-          >
-            {t('login')}
-          </button>
-          <button
-            onClick={() => navigate(-1)}
-            className="w-full py-4 text-gray-500 font-bold"
-          >
-            {t('cancel')}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const reviewToEdit = location.state?.review as Review | undefined;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [listingType, setListingType] = useState<'food' | 'clothes'>('food');
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const [form, setForm] = useState<AddReviewFormState>({
-    dish: 'Osh',
-    customDishName: '',
-    pricePaid: '',
-    pricePerPax: '',
-    serviceTax: '',
-    rating: 5,
-    visitDate: new Date().toISOString().split('T')[0],
-    priceFeeling: '',
-    portionSize: '',
-    title: '',
-    text: '',
-    tags: [],
+  const [form, setForm] = useState<AddReviewFormState>(() => {
+    if (reviewToEdit) {
+      const matchingClothingType = CLOTHING_TYPES.find((t: any) => t.id.toLowerCase() === reviewToEdit.dish_name.toLowerCase() || t.label.toLowerCase() === reviewToEdit.dish_name.toLowerCase());
+      const matchingFoodType = DISH_TYPES.find((t: any) => t.id.toLowerCase() === reviewToEdit.dish_name.toLowerCase() || t.label.toLowerCase() === reviewToEdit.dish_name.toLowerCase());
+      const matchingType = matchingClothingType || matchingFoodType;
+      return {
+        dish: matchingType ? matchingType.id : 'Custom',
+        customDishName: matchingType ? '' : reviewToEdit.dish_name,
+        pricePaid: reviewToEdit.price_paid?.toString() || '',
+        pricePerPax: reviewToEdit.price_per_pax?.toString() || '',
+        serviceTax: reviewToEdit.service_tax?.toString() || '',
+        rating: reviewToEdit.rating || 5,
+        visitDate: reviewToEdit.visit_date || new Date().toISOString().split('T')[0],
+        priceFeeling: reviewToEdit.price_feeling || '',
+        portionSize: reviewToEdit.portion_size || '',
+        title: reviewToEdit.title || '',
+        text: reviewToEdit.text || '',
+        tags: reviewToEdit.tags || [],
+      };
+    }
+    return {
+      dish: 'Osh',
+      customDishName: '',
+      pricePaid: '',
+      pricePerPax: '',
+      serviceTax: '',
+      rating: 5,
+      visitDate: new Date().toISOString().split('T')[0],
+      priceFeeling: '',
+      portionSize: '',
+      title: '',
+      text: '',
+      tags: [],
+    };
+  });
+
+  const [anonymousName, setAnonymousName] = useState(() => {
+    if (reviewToEdit) {
+      return reviewToEdit.submitter_name || '';
+    }
+    return '';
   });
 
   useState(() => {
@@ -72,10 +78,20 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
       getListingById(id).then(listing => {
         if (listing) {
           setListingType(listing.type);
-          setForm(prev => ({
-            ...prev,
-            dish: listing.type === 'food' ? 'osh' : 'koylak'
-          }));
+          if (!reviewToEdit) {
+            setForm(prev => ({
+              ...prev,
+              dish: listing.type === 'food' ? 'osh' : 'koylak'
+            }));
+          } else {
+            const typeList = listing.type === 'clothes' ? CLOTHING_TYPES : DISH_TYPES;
+            const matchingType = typeList.find((t: any) => t.id.toLowerCase() === reviewToEdit.dish_name.toLowerCase() || t.label.toLowerCase() === reviewToEdit.dish_name.toLowerCase());
+            setForm(prev => ({
+              ...prev,
+              dish: matchingType ? matchingType.id : 'Custom',
+              customDishName: matchingType ? '' : reviewToEdit.dish_name,
+            }));
+          }
         }
       });
     }
@@ -128,6 +144,24 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
 
     setIsSubmitting(true);
     try {
+      if (!reviewToEdit) {
+        // Check local rate limit (max 3 reviews per place per 24h)
+        const isAllowedLocal = await checkRateLimit(id);
+        if (!isAllowedLocal) {
+          setError(t('rateLimitLocalExceeded', "You've already submitted 3 reviews for this place in the last 24 hours. Please come back tomorrow."));
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Check global rate limit (max 10 reviews per day)
+        const isAllowedGlobal = await checkGlobalRateLimit();
+        if (!isAllowedGlobal) {
+          setError(t('rateLimitGlobalExceeded', "You've submitted too many reviews today. Please try again tomorrow."));
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       let uploadedPhotoUrls: string[] = [];
       
       if (photoFiles.length > 0) {
@@ -135,11 +169,15 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
         uploadedPhotoUrls = await Promise.all(uploadPromises);
       }
 
+      let finalPhotoUrls = uploadedPhotoUrls;
+      if (reviewToEdit && reviewToEdit.photo_urls) {
+        finalPhotoUrls = [...reviewToEdit.photo_urls, ...uploadedPhotoUrls];
+      }
+
       // Smart Mapping: Resolve the dish to a concept ID
       const dishConceptId = await resolveDishConcept(dishName, listingType);
       
-      await createReview({
-        listing_id: id,
+      const submitData = {
         dish_name: dishName,
         dish_concept_id: dishConceptId || undefined,
         price_paid: Number(form.pricePaid),
@@ -152,16 +190,23 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
         title: form.title,
         text: form.text,
         tags: form.tags,
-        photo_urls: uploadedPhotoUrls,
+        photo_urls: finalPhotoUrls,
         language_code: i18n.language || 'uz',
-        submitter_name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
-      });
+        submitter_name: user 
+          ? (profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || t('anonymous', 'Anonymous'))
+          : (anonymousName.trim() || t('anonymous', 'Anonymous'))
+      };
 
-      if (onReviewAdded) {
-        onReviewAdded();
+      if (reviewToEdit) {
+        await updateReview(reviewToEdit.id, submitData);
+      } else {
+        await createReview({
+          ...submitData,
+          listing_id: id,
+        });
       }
-      
-      navigate(`/restaurants/${id}`, { replace: true });
+
+      setShowSuccess(true);
     } catch (err: any) {
       console.error('Error submitting review:', err);
       setError(err.message || 'Failed to submit review. Please try again.');
@@ -170,6 +215,50 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
     }
   };
 
+  if (showSuccess) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center space-y-6">
+          <div className="w-20 h-20 bg-[#1D9E75]/10 rounded-full flex items-center justify-center mx-auto text-[#1D9E75] text-4xl">
+            ✓
+          </div>
+          <h2 className="text-2xl font-black text-gray-900">
+            {reviewToEdit ? t('reviewUpdated', 'Review Updated!') : t('reviewSubmitted', 'Review Submitted!')}
+          </h2>
+          <p className="text-gray-600 font-medium">
+            {reviewToEdit 
+              ? t('reviewUpdatedDesc', 'Your review has been updated successfully.') 
+              : t('reviewSuccessDesc', 'Thank you for sharing your experience! Your review helps others make better choices.')}
+          </p>
+          
+          {!user && (
+            <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl text-center space-y-2">
+              <p className="text-xs text-amber-800 font-bold leading-relaxed">
+                {t('editReviewLaterHint', "Want to edit this review later? Create a free account to manage your reviews.")}
+              </p>
+              <button
+                onClick={() => navigate('/login')}
+                className="text-xs font-black text-[#1D9E75] hover:underline"
+              >
+                {t('signUpOrCreateAccount', 'Create an Account / Login →')}
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => {
+              if (onReviewAdded) onReviewAdded();
+              navigate(`/restaurants/${id}`, { replace: true });
+            }}
+            className="w-full py-4 bg-[#1D9E75] text-white rounded-2xl font-black text-lg shadow-lg shadow-[#1D9E75]/20 hover:scale-[1.02] transition-transform"
+          >
+            {t('backToPlace', 'Back to Restaurant')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
@@ -177,7 +266,9 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
           <ChevronLeft size={24} className="text-gray-600" />
         </button>
-        <h1 className="text-xl font-black text-gray-900">{t('addReview')}</h1>
+        <h1 className="text-xl font-black text-gray-900">
+          {reviewToEdit ? t('editReview', 'Edit Review') : t('addReview')}
+        </h1>
       </header>
 
       <main className="max-w-2xl mx-auto p-4">
@@ -186,6 +277,24 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
             <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm font-bold">
               {error}
             </div>
+          )}
+
+          {/* Submitter Name (if not logged in) */}
+          {!user && (
+            <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+              <label className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-wider">
+                <span className="text-[#1D9E75]">👤</span>
+                {t('yourName', 'Your Name')}
+              </label>
+              <input
+                type="text"
+                name="anonymousName"
+                placeholder={t('yourNamePlaceholder', 'Your name (optional)')}
+                value={anonymousName}
+                onChange={(e) => setAnonymousName(e.target.value)}
+                className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D9E75] font-bold text-gray-900"
+              />
+            </section>
           )}
 
           {/* Dish Selection */}
@@ -225,8 +334,13 @@ export default function AddReviewPage({ onReviewAdded }: AddReviewPageProps) {
               {t('addPhoto')}
             </label>
             <div className="flex flex-wrap gap-4">
+              {reviewToEdit?.photo_urls?.map((url, index) => (
+                <div key={`existing-${index}`} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-100">
+                  <img src={url} alt="Review" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                </div>
+              ))}
               {photoFiles.map((file, index) => (
-                <div key={index} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-100">
+                <div key={`new-${index}`} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-100">
                   <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
                   <button
                     type="button"
