@@ -15,6 +15,54 @@ interface RestaurantListProps {
   selectedCategory: 'food' | 'clothes';
   isFilterActive: boolean;
   customDish?: string;
+  isLoading?: boolean;
+}
+
+function RestaurantCardSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-4 animate-pulse">
+      {/* Header */}
+      <div className="flex flex-col gap-2">
+        <div className="h-6 bg-gray-200 rounded w-2/3" />
+        <div className="flex items-center gap-1.5 mt-1">
+          <div className="w-3 h-3 bg-gray-200 rounded-full" />
+          <div className="h-3.5 bg-gray-200 rounded w-1/2" />
+        </div>
+        <div className="h-3 bg-gray-100 rounded w-1/3 mt-0.5" />
+      </div>
+
+      {/* Stats Line */}
+      <div className="flex justify-between items-center py-2.5 border-y border-gray-50">
+        <div className="flex flex-col gap-1.5">
+          <div className="h-3 bg-gray-100 rounded w-14" />
+          <div className="h-5 bg-gray-200 rounded w-24" />
+        </div>
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="h-5 bg-gray-200 rounded w-12" />
+          <div className="h-3 bg-gray-100 rounded w-10" />
+        </div>
+      </div>
+
+      {/* Details / Popularity */}
+      <div className="space-y-3">
+        <div className="h-8 bg-gray-50 rounded-xl w-full" />
+        <div className="flex flex-wrap gap-2 pt-1">
+          <div className="h-5 bg-gray-100 rounded-full w-14" />
+          <div className="h-5 bg-gray-100 rounded-full w-20" />
+          <div className="h-5 bg-gray-100 rounded-full w-16" />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between mt-auto pt-2">
+        <div className="h-4 bg-gray-100 rounded w-1/4" />
+        <div className="flex items-center gap-2">
+          <div className="h-9 bg-gray-200 rounded-xl w-24" />
+          <div className="h-9 bg-gray-200 rounded-xl w-28" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function RestaurantList({ 
@@ -26,7 +74,8 @@ export default function RestaurantList({
   selectedDishes, 
   selectedCategory,
   isFilterActive,
-  customDish
+  customDish,
+  isLoading = false
 }: RestaurantListProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -52,7 +101,7 @@ export default function RestaurantList({
           <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
             {selectedCategory === 'food' ? t('totalRestaurants') : t('totalShops')}
             <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs">
-              {restaurants.length}
+              {isLoading ? '...' : restaurants.length}
             </span>
           </h2>
 
@@ -76,7 +125,13 @@ export default function RestaurantList({
         </p>
       </div>
 
-      {restaurants.length === 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <RestaurantCardSkeleton key={index} />
+          ))}
+        </div>
+      ) : restaurants.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center gap-4">
           <div className="p-4 bg-gray-50 rounded-full">
             <ArrowUpDown size={32} className="text-gray-300" />

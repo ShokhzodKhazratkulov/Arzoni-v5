@@ -405,6 +405,7 @@ function AppContent() {
                   selectedCategory={selectedCategory}
                   isFilterActive={selectedDish !== 'All' || selectedPriceRange !== 'all'}
                   customDish={customDish}
+                  isLoading={loading}
                 />
               )}
             </main>
@@ -425,7 +426,7 @@ function AppContent() {
           selectedCategory={selectedCategory}
         />
 
-        {loading && (
+        {loading && viewMode !== 'list' && (
           <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[200] flex items-center justify-center">
             <div className="flex flex-col items-center gap-4 w-full max-w-xs px-6">
               <div className="w-12 h-12 border-4 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
